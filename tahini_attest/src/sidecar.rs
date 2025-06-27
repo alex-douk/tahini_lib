@@ -144,7 +144,6 @@ impl FifoWriterHandle {
     ) -> Result<(), ()> {
         //Encrypt session key
         let mut cipher = key_material.to_vec();
-        println!("FIFO_WRITE: Derived key as hex is {}", hex::encode(&cipher));
         let nonce = self
             .kek
             .seal_in_place_append_tag(Aad::empty(), &mut cipher)
@@ -162,7 +161,12 @@ impl FifoWriterHandle {
             client_id
         )
         .expect("Couldn't write to FIFO");
-        println!("We wrote line \"{},{},{}\n\"",nonce_hex, cipher_hex, client_id);
         Ok(())
+    }
+}
+
+impl Drop for FifoWriterHandle {
+    fn drop(&mut self) {
+        std::fs::remove_file(&self.fifo_path);
     }
 }

@@ -97,7 +97,6 @@ impl CertificateLoader {
 
     pub(crate) fn register_bin_mapping(&mut self, bin: ServiceName, service: ServiceName) {
         self.service_to_bin.insert(service, bin);
-        println!("Got bin mapping: {:?}", self.service_to_bin);
     }
 
     pub fn get_reverse_mapping(&self, service_name: &ServiceName) -> Option<&ServiceName> {
@@ -120,7 +119,6 @@ struct KeyConfig {
 impl Config {
     fn into_loader(self) -> AttestResult<CertificateLoader> {
         let mut loader = CertificateLoader::new();
-        println!("We got config {:?}", &self);
         if self.keys.is_some() {
             let key_path = self.keys.unwrap().path;
             let path = Path::new(&key_path);

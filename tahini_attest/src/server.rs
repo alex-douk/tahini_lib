@@ -33,7 +33,6 @@ pub unsafe fn client_map_state_constructor() {
         loop {
             //read_session_key is blocking on actually reading a key
             let (client_id, session_key) = read_handler.read_session_key();
-            println!("We got a key!");
             //We only acquire write lock if we have a key to write
             CLIENT_MAP
                 .write()
@@ -84,11 +83,6 @@ impl FifoReadHandle {
                         }
                         let (nonce_hex, cipher_hex, client_id) =
                             (splitted_line[0], splitted_line[1], splitted_line[2]);
-                        println!(
-                            "WEWOOO WE HAVE A LINE : Splitted it is {},{},{}",
-                            nonce_hex, cipher_hex, client_id
-                        );
-
                         //Decode to slice handles string mismatch, so we can ensure the nonce is
                         //welformed and full after decoding
                         let mut nonce: [u8; 12] = [0u8; 12];
@@ -101,10 +95,6 @@ impl FifoReadHandle {
                             .open_in_place(nonce, Aad::empty(), &mut cipher_vec)
                             .expect("Couldn't decrypt cipher");
 
-                        println!(
-                            "FIFO_READ: Derived key as hex is {}",
-                            hex::encode(&key_material)
-                        );
 
                         let key = RandomizedNonceKey::new(&AES_256_GCM, &key_material)
                             .expect("Couldn't generate session key from derived key material");
