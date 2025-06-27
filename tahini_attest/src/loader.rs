@@ -9,7 +9,7 @@ use crate::types::{AttestErrors, AttestResult, ServiceName, TahiniCertificate};
 pub struct CertificateLoader {
     certificates: HashMap<ServiceName, TahiniCertificate>,
     accepted_keys: Option<UnparsedPublicKey<Vec<u8>>>,
-    //Lazy to handle types and propagate it everywhere. The value field of the map should be
+    //FIXME: Lazy to handle types and propagate it everywhere. The value field of the map should be
     //BinaryName. The goal is for the client to be able to supply a ServiceName via a generated
     //Tahini Client stub, and this gets handled internally. Other solution is to segment
     //certificates per service...
@@ -105,14 +105,14 @@ impl CertificateLoader {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Config {
     certificates: Table,
     keys: Option<KeyConfig>,
     service_mapping: Table,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct KeyConfig {
     path: String,
 }
@@ -120,6 +120,7 @@ struct KeyConfig {
 impl Config {
     fn into_loader(self) -> AttestResult<CertificateLoader> {
         let mut loader = CertificateLoader::new();
+        println!("We got config {:?}", &self);
         if self.keys.is_some() {
             let key_path = self.keys.unwrap().path;
             let path = Path::new(&key_path);

@@ -24,8 +24,11 @@ use crate::{
 };
 
 pub struct DynamicAttestationVerifier {
+    //Certificate handler
     certificate_handler: CertificateLoader,
+    //Allowed public keys for runtime attestation verification
     allowed_keys: UnparsedPublicKey<Vec<u8>>,
+    //Config for connecting to sidecar
     sidecar_host: SidecarHost,
 }
 
@@ -43,6 +46,7 @@ impl DynamicAttestationVerifier {
         data.into_verifier()
     }
 
+    ///Verify remote certificate against the one from disk
     pub fn verify_certificate(&self, remote_certificate: &TahiniCertificate) -> bool {
         let key = self.certificate_handler.get_key();
         if key.is_none() {
@@ -59,13 +63,18 @@ impl DynamicAttestationVerifier {
         local_certificate == remote_certificate
     }
 
+    ///Main function for client-side verification.
+    ///This function is invoked by the Tahini Tarpc wrapper (living in Sesame currently)
+    ///In order:
+    ///Generate local_key_share
+    ///Connect to sidecar to get (client_id, server_key_share, attestation_report)
+    ///Verify attestation
+    ///Finish key agreement protocol
+    ///Return client_id and key to the Tahini tarpc client handler 
     pub async fn verify_binary(
         &self,
         service_name: ServiceName,
     ) -> AttestResult<(ClientId, RandomizedNonceKey)> {
-        let host = (self.sidecar_host.hostname, self.sidecar_host.port);
-        let stream = tarpc::serde_transport::tcp::connect(host, Json::default);
-        let client = AttestationServiceClient::new(Default::default(), stream.await.unwrap());
         let mut dest = [0u8; 16];
         if aws_lc_rs::rand::fill(&mut dest).is_err() {
             return Err(AttestErrors::CryptoError);
@@ -80,6 +89,9 @@ impl DynamicAttestationVerifier {
         let bin_name = bin_name.expect("Binary reverse lookup should exist");
 
         let (sk, pkey) = compute_local_share();
+        let host = (self.sidecar_host.hostname, self.sidecar_host.port);
+        let stream = tarpc::serde_transport::tcp::connect(host, Json::default);
+        let client = AttestationServiceClient::new(Default::default(), stream.await.unwrap());
         let report = client
             .spawn()
             .attest_binary(
