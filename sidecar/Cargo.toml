@@ -1,0 +1,17 @@
+[package]
+name = "sidecar"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aws-lc-rs = "1.13.1"
+serde = { version = "1.0.219", features = ["derive", "serde_derive"] }
+serde_json = { version = "1.0.140", features = ["preserve_order"] }
+sha2 = "0.10.9"
+tarpc = { version = "0.36.0", features = ["full"] }
+tokio = { version = "1.45.1", features = ["io-std", "io-util", "rt", "mio", "libc", "tokio-macros", "macros", "rt-multi-thread"] }
+tokio-macros = "2.5.0"
+tokio-util = "0.7.15"
+tahini_attest = {version = "0.1.0", git = "https://github.com/alex-douk/tahini_lib", features = ["sidecar"]}
+toml = "0.8.23"
+futures = "0.3.31"
