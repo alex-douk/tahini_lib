@@ -1,0 +1,24 @@
+[package]
+name = "trusted_attest"
+version = "0.1.0"
+edition = "2024"
+
+[package.metadata.rust-analyzer]
+rustc_private = true
+
+[dependencies]
+env_logger = "0.11.8"
+log = "0.4.27"
+rustc_plugin = {version = "0.12.0-nightly-2024-12-15" }
+rustc_utils = {version = "0.12.0-nightly-2024-12-15" }
+serde = { version = "1.0.219", features = ["derive", "serde_derive"] }
+serde_json = { version = "1.0.140", features = ["preserve_order"] }
+sha256 = "1.6.0"
+
+[replace."rustc_plugin:0.12.0-nightly-2024-12-15"]
+git = "https://github.com/cognitive-engineering-lab/rustc_plugin"
+rev= "2305d916d97b41721b578eef63c0e947498df1b3"
+
+[replace."rustc_utils:0.12.0-nightly-2024-12-15"]
+git = "https://github.com/cognitive-engineering-lab/rustc_plugin"
+rev= "2305d916d97b41721b578eef63c0e947498df1b3"
