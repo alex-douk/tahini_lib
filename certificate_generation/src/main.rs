@@ -74,7 +74,6 @@ fn match_policies_to_bin(
                                         bin_filename.to_str().unwrap().to_string(),
                                         PolicyHash(retrieve_hash_from_file(path.as_path())?),
                                     );
-                                    println!("{}", policy_filename);
                                 }
                             }
                         }
@@ -98,13 +97,10 @@ fn find_binaries_in_target(target_dir: &Path) -> io::Result<Vec<PathBuf>> {
     // let possible_dirs = vec![target_dir.join("debug"), target_dir.join("release")];
 
     let dir = target_dir.join("release");
-    println!("Exploring dir {:?}", dir);
     // for dir in possible_dirs {
     if dir.exists() && dir.is_dir() {
-        println!("Found target dir");
         for entry in fs::read_dir(&dir)? {
             let path = entry?.path();
-            println!("Found entry {:?}", path);
             if is_executable(&path) {
                 binaries.push(path);
             }
@@ -166,7 +162,6 @@ fn main() -> io::Result<()> {
     );
 
     let binaries = find_binaries_in_target(&target_dir)?;
-    println!("Found {} binaries", binaries.len());
 
     let policy_dir = project_root.join("policy_hashes");
 
