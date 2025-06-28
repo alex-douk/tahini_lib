@@ -40,7 +40,7 @@ compile_policies PROJECT_FOLDER:
 
 #Generate certificates bound to binaries
 gen_certificates PROJECT_FOLDER KEY_FOLDER="../keys":
-  mkdir -p {{justfile_dir()}}/certificates/
+  mkdir -p {{justfile_dir()}}/certificates/{{file_name(PROJECT_FOLDER)}}
   cd certificate_generation && cargo run --release -- -p ../{{PROJECT_FOLDER}} -k {{KEY_FOLDER}}/certif_keys/certificate_skey.der
   cp -r {{PROJECT_FOLDER}}/certificates/* {{justfile_dir()}}/certificates/{{file_name(PROJECT_FOLDER)}}/
   cd {{justfile_dir()}}
@@ -57,7 +57,7 @@ build_toolchain PROJECT_FOLDER KEY_FOLDER="../keys":
 
 
 gen_sidecar_configs PROJECT_FOLDER:
-  cd ./config_parser && cargo run --release -- -m ../{{PROJECT_FOLDER}}/project_metadata.toml -c {{justfile_dir()}}/certificates/{{file_stem(PROJECT_FOLDER)}}/ -k {{justfile_dir()}}/keys/runtime_keys/sidecar_skey.der -C {{justfile_dir()}}/sidecar/certificate_config.toml
+  cd ./config_parser && cargo run --release -- -m ../{{PROJECT_FOLDER}}/project_metadata.toml -c {{justfile_dir()}}/certificates/{{file_name(PROJECT_FOLDER)}}/ -k {{justfile_dir()}}/keys/runtime_keys/sidecar_skey.der -C {{justfile_dir()}}/sidecar/certificate_config.toml
   cp ./config_parser/certificate_config.toml ./config_parser/sidecar_config.toml ./sidecar
 
 
