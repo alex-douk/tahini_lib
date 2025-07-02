@@ -19,6 +19,7 @@ lazy_static! {
         Arc::new(RwLock::new(HashMap::new()));
 }
 
+//Pre-main server pipe construction and background thread handling
 #[ctor::ctor]
 pub unsafe fn client_map_state_constructor() {
     let args = SidecarCliArgs::parse();
@@ -50,6 +51,8 @@ struct SidecarCliArgs {
     kek_hex: String,
 }
 
+///Pipe handler on the server (read) side.
+///The channel is protected by some key that is passed via command-line to the server.
 struct FifoReadHandle {
     kek: RandomizedNonceKey,
     handle: File,
@@ -69,6 +72,10 @@ impl FifoReadHandle {
         }
     }
 
+    ///Reads a session information from the pipe.
+    ///A line contains a (`Nonce`, `Cipher`, `ClientId`) triplet.
+    ///The `Nonce` and the `Cipher` are under hex representations.
+    ///We only acquire map lock on a successful line parsing.
     fn read_session_key(&self) -> (ClientId, RandomizedNonceKey) {
         let mut reader = BufReader::new(&self.handle);
         let mut buf = String::new();
@@ -83,8 +90,8 @@ impl FifoReadHandle {
                         }
                         let (nonce_hex, cipher_hex, client_id) =
                             (splitted_line[0], splitted_line[1], splitted_line[2]);
-                        //Decode to slice handles string mismatch, so we can ensure the nonce is
-                        //welformed and full after decoding
+                        //Decode to slice handles string size mismatch, so we can ensure the nonce is
+                        //well-formed and full after decoding
                         let mut nonce: [u8; 12] = [0u8; 12];
                         hex::decode_to_slice(nonce_hex, &mut nonce).expect("Malformed nonce");
 
@@ -114,10 +121,17 @@ impl FifoReadHandle {
     }
 }
 
+
+///Reads the session for a given `ClientId`. 
+///In order to manage the session map size,
+///server handlers get a write lock on the map and delete their entry
+///from the map.
+///We will have to evaluate at some point if read locks are not better under stress.
 pub fn get_key_for_client(client_id: &ClientId) -> RandomizedNonceKey {
     let mut engine_lock = CLIENT_MAP
         .write()
         .expect("Couldn't get a read lock on the client map");
+    //FIXME: Handle error gracefully, this poisons the entire session on a miss as we have write lock
     let val = engine_lock
         .remove_entry(client_id)
         .expect("Client_id not found in the map");
