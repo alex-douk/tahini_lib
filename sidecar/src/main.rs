@@ -1,4 +1,6 @@
 use aws_lc_rs::rand::{SecureRandom, SystemRandom};
+use std::future::Future;
+use std::mem::size_of;
 use aws_lc_rs::signature::Ed25519KeyPair;
 use futures::StreamExt;
 use std::collections::HashMap;
@@ -168,6 +170,10 @@ impl AttestationService for SideCarServer {
     }
 }
 
+async fn wait_upon(fut: impl Future<Output = ()>) {
+    fut.await
+}
+
 #[tokio::main]
 #[allow(unreachable_code)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -214,7 +220,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let transport = new_transport(framed, Json::default());
         let fut = BaseChannel::with_defaults(transport)
             .execute(server.clone().serve())
-            .for_each(async |f| f.await);
+            .for_each(wait_upon);
         tokio::spawn(fut);
     }
     unreachable!()
