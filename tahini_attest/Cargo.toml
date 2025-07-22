@@ -1,3 +1,3 @@
 [workspace]
-members=["crates/*"]
+members=["./crates/*"]#hoodini-core/, crates/hoodini-client", "crates/hoodini-server", "crates/hoodini-sidecar"]
 resolver="2"

@@ -86,6 +86,7 @@ pub enum AttestErrors {
     InvalidAttestation,
 }
 
+#[cfg(feature="attest")]
 pub type AttestResult<T> = Result<T, AttestErrors>;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
