@@ -6,7 +6,7 @@ authors = ["Alexandre Doukhan"]
 
 
 [lib]
-name = "hoodini_sidecar"
+name = "hoodini_client"
 path = "src/lib.rs"
 
 [dependencies]
