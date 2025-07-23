@@ -2,7 +2,6 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::env;
 use std::fs;
 use std::fs::File;
 use std::fs::create_dir;
