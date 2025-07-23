@@ -1,0 +1,34 @@
+[package]
+name = "tahini_tarpc"
+version = "0.1.0"
+edition = "2021"
+
+
+[lib]
+name="tahini_tarpc"
+path="src/lib.rs"
+
+[dependencies]
+erased-serde = "0.4.6"
+serde = { version = "1.0.219", features = ["derive", "serde_derive"] }
+serde_json = { version = "1.0.141", features = ["preserve_order"] }
+# tokio = { version = "1.46.1", features = ["io-std", "io-util", "rt", "mio", "libc", "tokio-macros", "macros", "rt-multi-thread"] }
+tokio = { version = "=1.42.0", features = ["io-std", "io-util", "rt", "mio", "libc"] }
+
+alohomora = {version = "0.1.0", git = "https://github.com/brownsys/Sesame", branch = "extensions_devel"}
+hoodini_core = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "separate_crates", features=["attest"]}
+hoodini_client = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", rev="c651aad"}
+# hoodini_client = {version="0.1.0", path="../tahini_attest/crates/hoodini-client"}
+async-trait = "0.1.83"
+tokio-serde = { version = "0.8.0", features = ["serde_json", "json"] }
+tokio-util = "0.7.13"
+tokio-macros = "2.4.0"
+educe = { version = "0.6.0", features = ["full"] }
+tarpc = { version = "0.34.0", features = ["full"]}
+pin-project-lite = "0.2.14"
+aws-lc-rs = "1.13.1"
+futures = "0.3.31"
+
+
+[patch.crates-io]
+funty = { git = "https://github.com/bitvecto-rs/funty/", rev = "7ef0d890fbcd8b3def1635ac1a877fc298488446" }
