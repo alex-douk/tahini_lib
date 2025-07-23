@@ -12,11 +12,11 @@ pub struct TahiniCertificate {
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[allow(unused)]
-pub struct BinHash(pub(crate) String);
+pub struct BinHash(pub String);
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[allow(unused)]
-pub struct Signature(pub(crate) String);
+pub struct Signature(pub String);
 
 impl From<awsSig> for Signature {
     fn from(value: awsSig) -> Self {
@@ -50,7 +50,7 @@ pub struct DynamicAttestationData<'a> {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
-pub struct ServiceName(pub(crate) String);
+pub struct ServiceName(pub String);
 
 impl ServiceName {
     pub fn to_bytes(self) -> Vec<u8> {
@@ -73,19 +73,20 @@ impl From<String> for ServiceName {
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct BinaryName(pub(crate) String);
 
+
+#[cfg(feature="attest")]
 #[derive(Debug)]
 pub enum AttestErrors {
     IoError(std::io::Error),
     ServiceMismatchError,
-    #[cfg(any(feature = "client", feature = "sidecar"))]
     NetworkError(tarpc::client::RpcError),
-    #[cfg(any(feature = "client", feature = "sidecar"))]
     AttestDataMalformedError(serde_json::Error),
     ConfigError(String),
     CryptoError,
     InvalidAttestation,
 }
 
+#[cfg(feature="attest")]
 pub type AttestResult<T> = Result<T, AttestErrors>;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]

@@ -1,0 +1,17 @@
+[package]
+name = "hoodini_server"
+version = "0.1.0"
+edition = "2021"
+authors = ["Alexandre Doukhan"]
+
+[lib]
+name = "hoodini_server"
+path = "src/lib.rs"
+
+[dependencies]
+aws-lc-rs = "1.13.1"
+clap = { version = "4.5.40", features = ["derive"]}
+ctor = {version = "0.4.2"}
+hex = { version = "0.4.3", features = ["serde"] }
+lazy_static = {version = "1.5.0"}
+hoodini_core = {version="0.1.0", path="../hoodini-core/"}

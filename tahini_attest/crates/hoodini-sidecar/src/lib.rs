@@ -16,7 +16,7 @@ use aws_lc_rs::{
 };
 use sha2::{Digest, Sha256};
 
-use crate::types::{
+use hoodini_core::types::{
     BinHash, ClientId,
     ServiceName,
 };
@@ -167,6 +167,6 @@ impl FifoWriterHandle {
 
 impl Drop for FifoWriterHandle {
     fn drop(&mut self) {
-        std::fs::remove_file(&self.fifo_path);
+        let _ = std::fs::remove_file(&self.fifo_path);
     }
 }

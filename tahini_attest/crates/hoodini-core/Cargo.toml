@@ -1,0 +1,23 @@
+[package]
+name = "hoodini_core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Alexandre Doukhan"]
+
+[lib]
+name = "hoodini_core"
+path = "src/lib.rs"
+
+[dependencies]
+aws-lc-rs = "1.13.1"
+hex = { version = "0.4.3", features = ["serde"] }
+libc = "0.2.164"
+serde = { version = "1.0.219", features = ["derive", "serde_derive"]}
+serde_json = { version = "1.0.140", features = ["preserve_order"]}
+sha2 = "0.10.9"
+tarpc = { version = "0.36.0", features = ["full"] , optional = true}
+tokio-util = "0.7.15"
+toml = "0.8.23"
+
+[features]
+attest=["dep:tarpc"]

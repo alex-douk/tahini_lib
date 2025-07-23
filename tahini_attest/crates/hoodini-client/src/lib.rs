@@ -14,8 +14,8 @@ use serde::Deserialize;
 use tarpc::{context, tokio_serde::formats::Json};
 use toml::{Table, Value};
 
-use crate::{
-    loader::{CertificateLoader, CertificateProvider},
+pub use hoodini_core::{
+    certificate::{CertificateLoader, CertificateProvider},
     service::{AttestationServiceClient, compute_local_share, derive_key_from_shares},
     types::{
         AttestErrors, AttestResult, ClientId, DynamicAttestationData, ServiceName,

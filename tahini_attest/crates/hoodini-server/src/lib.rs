@@ -10,7 +10,7 @@ use std::{
 use aws_lc_rs::aead::{AES_256_GCM, Aad, Nonce, RandomizedNonceKey};
 use lazy_static::lazy_static;
 
-use crate::types::ClientId;
+pub use hoodini_core::types::ClientId;
 use clap::Parser;
 use std::thread;
 
@@ -131,7 +131,11 @@ pub fn get_key_for_client(client_id: &ClientId) -> RandomizedNonceKey {
     let mut engine_lock = CLIENT_MAP
         .write()
         .expect("Couldn't get a read lock on the client map");
-    //FIXME: Handle error gracefully, this poisons the entire session on a miss as we have write lock
+    //FIXME: Add error handling for non present client. Also note that the write lock poisons the
+    //entire map currently which is iffy.
+    //Currently, if a client is missing from the map (which could be either by race condition between
+    //sidecar->server and client->server comm, or by
+    //malicious client), the server is crashing.
     let val = engine_lock
         .remove_entry(client_id)
         .expect("Client_id not found in the map");

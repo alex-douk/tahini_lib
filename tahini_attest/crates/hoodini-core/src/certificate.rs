@@ -95,7 +95,10 @@ impl CertificateLoader {
         data.into_loader()
     }
 
-    pub(crate) fn register_bin_mapping(&mut self, bin: ServiceName, service: ServiceName) {
+    //FIXME: This method should not exist. It is an artifact of not including service names in the
+    //manifest, and having to retrieve them post-hoc. If the manifest includes the actual service
+    //name for which it is generate, this method should be removed.
+    pub fn register_bin_mapping(&mut self, bin: ServiceName, service: ServiceName) {
         self.service_to_bin.insert(service, bin);
     }
 
