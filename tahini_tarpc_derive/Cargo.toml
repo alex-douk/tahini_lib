@@ -1,0 +1,23 @@
+[package]
+name = "tahini_tarpc_derive"
+version = "0.1.0"
+edition = "2021"
+authors = ["Alexandre Doukhan"]
+
+[lib]
+name = "tahini_tarpc_derive"
+path = "src/lib.rs"
+proc-macro = true
+
+[dependencies]
+attribute-derive = "0.8.1"
+proc-macro2 = "1.0.58"
+quote = "1.0.27"
+syn = { version = "2.0.16", features = [ "full" ] }
+
+
+[features]
+server=[]
+client=[]
+default=["server", "client"]
+
