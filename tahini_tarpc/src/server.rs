@@ -6,7 +6,7 @@ use std::task::Poll;
 
 use aws_lc_rs::aead::RandomizedNonceKey;
 
-#[cfg(feature="tahini_server")]
+//FIXME: Hide this behind an attestation flag
 use tahini_attest::server::get_key_for_client;
 
 use crate::{enums::TahiniSafeWrapper, traits::TahiniType};
