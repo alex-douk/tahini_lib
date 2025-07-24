@@ -69,10 +69,10 @@ where
     }
 }
 
+//FIXME: Encryption should only exist if attestation is required.
 pub fn new_tahini_transport<'a, S, Item, SinkItem, Codec>(
     framed_io: Framed<S, LengthDelimitedCodec>,
     codec: Codec,
-    encrypt: bool
 ) -> TahiniTransport<S, Item, SinkItem, Codec>
 where
     S: tokio::io::AsyncWrite + tokio::io::AsyncRead,
@@ -83,7 +83,7 @@ where
     let engine = KeyEngineState::new();
     let key_engine = engine.clone();
     let encryption_layer: TahiniEncryptionLayer<Item, SinkItem, Codec> =
-        TahiniEncryptionLayer::new(codec, engine, encrypt);
+        TahiniEncryptionLayer::new(codec, engine);
 
     TahiniTransport {
         transport: tarpc::serde_transport::new(framed_io, encryption_layer),
@@ -97,6 +97,7 @@ pub struct SerializedCipher {
     nonce: [u8; 12],
 }
 
+//FIXME: Encryption should only exist if attestation is required.
 pin_project! {
     pub struct TahiniEncryptionLayer<Item, SinkItem, C>
     {
@@ -105,7 +106,6 @@ pin_project! {
         item: PhantomData<Item>,
         sink: PhantomData<SinkItem>,
         key_state: KeyEngineState,
-        encrypt: bool
     }
 }
 
@@ -113,13 +113,12 @@ impl<C, Item, SinkItem> TahiniEncryptionLayer<Item, SinkItem, C>
 where
     C: Serializer<SinkItem> + Deserializer<Item>,
 {
-    pub(crate) fn new(codec: C, engine: KeyEngineState, encrypt: bool) -> Self {
+    pub(crate) fn new(codec: C, engine: KeyEngineState) -> Self {
         Self {
             inner_channel: codec,
             item: PhantomData,
             sink: PhantomData,
             key_state: engine,
-            encrypt
         }
     }
 }
@@ -161,11 +160,11 @@ where
         item: &SinkItem,
     ) -> Result<tokio_util::bytes::Bytes, Self::Error> {
         let key_engine = self.key_state.clone();
-        let mut key_opt = key_engine.key.get();
-        match self.encrypt {
-            false => key_opt = None,
-            true => ()
-        }
+        let key_opt = key_engine.key.get();
+        // match self.encrypt {
+        //     false => key_opt = None,
+        //     true => ()
+        // }
 
         match key_opt {
             None => C::serialize(self.project().inner_channel, item)
@@ -213,12 +212,12 @@ where
         src: &tokio_util::bytes::BytesMut,
     ) -> Result<Item, Self::Error> {
         let arc_cloned = self.key_state.key.clone();
-        let mut key_opt = arc_cloned.get();
+        let key_opt = arc_cloned.get();
 
-        match self.encrypt {
-            false => key_opt = None,
-            true => ()
-        }
+        // match self.encrypt {
+        //     false => key_opt = None,
+        //     true => ()
+        // }
         match key_opt {
             None => {
                 let a = C::deserialize(self.project().inner_channel, src).map_err(|_| {

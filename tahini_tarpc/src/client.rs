@@ -263,15 +263,17 @@ where
     E: std::error::Error + Send + Sync + 'static,
     C: TahiniStubWrapper,
 {
-    pub async fn spawn(self, attest:bool) -> C {
+    pub async fn spawn(self) -> C {
         let client = TarpcNewClient {
             client: self.client,
             dispatch: self.dispatch,
         };
         let client = client.spawn();
-        if attest {
+        // if attest {
+        //TODO(douk): Attestation should be behind a feature flag (or at least a command-line
+        //variable)
             client.attest_on_launch().await;
-        }
+        // }
         // #[cfg(feature="attest")]
         // client.attest_on_launch().await;
         client

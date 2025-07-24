@@ -34,7 +34,7 @@ where
 
     fn transport(&self) -> &Self::Transport;
 
-    fn execute<S>(self, serve: S, encrypt: bool) -> impl Stream<Item = impl Future<Output = ()>>
+    fn execute<S>(self, serve: S) -> impl Stream<Item = impl Future<Output = ()>>
     where
         S: TahiniServe<Req = Self::Req, Resp = Self::Resp> + Clone;
 }
@@ -96,13 +96,13 @@ where
         self.channel.transport()
     }
 
-    fn execute<S>(self, serve: S, encrypt:bool) -> impl Stream<Item = impl Future<Output = ()>>
+    fn execute<S>(self, serve: S) -> impl Stream<Item = impl Future<Output = ()>>
     where
         Self: Sized,
         S: TahiniServe<Req = Self::Req, Resp = Self::Resp> + Clone,
     {
         self.channel
-            .execute(ServeAdapter::new(serve, self.key_engine, encrypt))
+            .execute(ServeAdapter::new(serve, self.key_engine))
     }
 }
 
@@ -194,18 +194,17 @@ pub trait TahiniServe {
         Self: Sized;
 }
 
+//FIXME: Encryption should only exist if attestation is required.
 #[derive(Clone)]
 struct ServeAdapter<T: TahiniServe> {
     tahini_serve: T,
     key_engine: KeyEngineState,
-    encrypt: bool
 }
 impl<T: TahiniServe> ServeAdapter<T> {
-    fn new(tahini_serve: T, key_engine: KeyEngineState, encrypt: bool) -> Self {
+    fn new(tahini_serve: T, key_engine: KeyEngineState) -> Self {
         Self {
             tahini_serve,
             key_engine,
-            encrypt
         }
     }
 
@@ -222,13 +221,14 @@ impl<T: TahiniServe> TarpcServe for ServeAdapter<T> {
 
     async fn serve(self, ctx: Context, req: Self::Req) -> Result<Self::Resp, ServerError> {
         //If we do not encrypt, let's just return and not even bother with fetching the key and
+        //FIXME: Encryption should only exist if attestation is required.
         //whatnot
-        if !self.encrypt {
-            return self.tahini_serve
-                .serve(ctx, req)
-                .map(|res| res.map(|rsp| TahiniSafeWrapper(rsp)))
-                .await;
-        }
+        // if !self.encrypt {
+        //     return self.tahini_serve
+        //         .serve(ctx, req)
+        //         .map(|res| res.map(|rsp| TahiniSafeWrapper(rsp)))
+        //         .await;
+        // }
 
         if self.key_engine.key.get().is_none() {
             self.tahini_serve
