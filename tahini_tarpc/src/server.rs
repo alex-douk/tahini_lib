@@ -7,7 +7,7 @@ use std::task::Poll;
 use aws_lc_rs::aead::RandomizedNonceKey;
 
 //FIXME: Hide this behind an attestation flag
-use tahini_attest::server::get_key_for_client;
+use hoodini_server::get_key_for_client;
 
 use crate::{enums::TahiniSafeWrapper, traits::TahiniType};
 use futures::{FutureExt, Sink, Stream};
@@ -211,9 +211,8 @@ impl<T: TahiniServe> ServeAdapter<T> {
 
 }
 
-#[cfg(feature="tahini_server")]
 pub fn get_session_key_for_client(client_id: usize) -> RandomizedNonceKey {
-    let client_id = tahini_attest::types::ClientId::from(client_id);
+    let client_id = hoodini_server::ClientId::from(client_id);
     get_key_for_client(&client_id)
 }
 
