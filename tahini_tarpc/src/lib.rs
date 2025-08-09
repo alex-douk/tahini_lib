@@ -9,4 +9,7 @@ pub use enums::{TahiniEnum, TahiniVariantsEnum};
 pub use traits::{TahiniType, TahiniTransformFrom, TahiniTransformInto};
 // pub use serde::{Serialize as TahiniSerialize, Deserialize as };
 pub use serde::{Serialize as TahiniSerialize, Deserialize as TahiniDeserialize, Serializer, Deserializer};
-pub use alohomora as sesame;
+
+
+#[cfg(feature = "derive")]
+pub use tahini_tarpc_derive::*;
