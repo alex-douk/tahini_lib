@@ -8,10 +8,10 @@ use std::io::Read;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::Path;
 use std::sync::Arc;
-use tahini_attest::loader::{CertificateLoader, CertificateProvider};
-use tahini_attest::service::{AttestationService, compute_local_share, derive_key_from_shares};
-use tahini_attest::sidecar::{FifoWriterHandle, hash_bin, launch_binary};
-use tahini_attest::types::{
+use hoodini_core::certificate::{CertificateLoader, CertificateProvider};
+use hoodini_core::service::{AttestationService, compute_local_share, derive_key_from_shares};
+use hoodini_sidecar::{FifoWriterHandle, hash_bin, launch_binary};
+use hoodini_core::types::{
     BinHash, ClientId, DynamicAttestationData, DynamicAttestationReport, ServiceName,
 };
 use tarpc::serde_transport::new as new_transport;

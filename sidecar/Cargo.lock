@@ -447,6 +447,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "hoodini_core"
+version = "0.1.0"
+source = "git+https://github.com/alex-douk/tahini_lib?branch=standalone_tahini#af5fefc016cf22d1439d7b27786bfa6f6351d3fe"
+dependencies = [
+ "aws-lc-rs",
+ "hex",
+ "libc",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tarpc",
+ "tokio-util",
+ "toml",
+]
+
+[[package]]
+name = "hoodini_sidecar"
+version = "0.1.0"
+source = "git+https://github.com/alex-douk/tahini_lib?branch=standalone_tahini#af5fefc016cf22d1439d7b27786bfa6f6351d3fe"
+dependencies = [
+ "aws-lc-rs",
+ "hex",
+ "hoodini_core",
+ "libc",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio-util",
+ "toml",
+]
+
+[[package]]
 name = "humantime"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -876,10 +908,11 @@ version = "0.1.0"
 dependencies = [
  "aws-lc-rs",
  "futures",
+ "hoodini_core",
+ "hoodini_sidecar",
  "serde",
  "serde_json",
  "sha2",
- "tahini_attest",
  "tarpc",
  "tokio",
  "tokio-macros",
@@ -918,22 +951,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "tahini_attest"
-version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib#e4055e04ee92536c50e647fe7d1bf7920051ad39"
-dependencies = [
- "aws-lc-rs",
- "hex",
- "libc",
- "serde",
- "serde_json",
- "sha2",
- "tarpc",
- "tokio-util",
- "toml",
 ]
 
 [[package]]

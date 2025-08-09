@@ -4,7 +4,7 @@ use std::{
 };
 
 use serde::Deserialize;
-use tahini_attest::types::{BinaryName, ServiceName};
+use hoodini_core::types::{BinaryName, ServiceName};
 use toml::{Table, Value};
 
 #[derive(Deserialize)]
