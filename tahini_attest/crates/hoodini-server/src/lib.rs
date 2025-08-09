@@ -11,8 +11,6 @@ use aws_lc_rs::aead::{AES_256_GCM, Aad, Nonce, RandomizedNonceKey};
 use lazy_static::lazy_static;
 
 pub use hoodini_core::types::ClientId;
-use clap::Parser;
-use std::thread;
 
 lazy_static! {
     pub static ref CLIENT_MAP: Arc<RwLock<HashMap<ClientId, RandomizedNonceKey>>> =
@@ -20,14 +18,15 @@ lazy_static! {
 }
 
 //Pre-main server pipe construction and background thread handling
+#[cfg(feature = "sidecar")]
 #[ctor::ctor]
 pub unsafe fn client_map_state_constructor() {
-    let args = SidecarCliArgs::parse();
+    let args = <SidecarCliArgs as clap::Parser>::parse();
     let fifo_read = File::options()
         .read(true)
         .open(&args.fifo_path)
         .expect("Couldn't open FIFO as read");
-    thread::spawn(move || {
+    std::thread::spawn(move || {
         let kek_hex = args.kek_hex;
         let fifo_path = args.fifo_path;
         let read_handler = FifoReadHandle::new(fifo_path, kek_hex);
@@ -43,6 +42,7 @@ pub unsafe fn client_map_state_constructor() {
     });
 }
 
+#[cfg(feature = "sidecar")]
 #[derive(clap::Parser)]
 struct SidecarCliArgs {
     #[arg(long = "fifo_path")]
@@ -83,7 +83,6 @@ impl FifoReadHandle {
             match reader.read_line(&mut buf) {
                 Ok(n) => {
                     if n > 0 {
-                        std::io::stdout().flush();
                         let splitted_line: Vec<_> = buf.split(",").collect();
                         if splitted_line.len() != 3 {
                             panic!("Line received from FIFO is malformed")
