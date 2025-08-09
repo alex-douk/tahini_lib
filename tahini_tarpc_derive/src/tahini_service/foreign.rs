@@ -508,7 +508,7 @@ impl<'a> ServiceGenerator<'a> {
                         },
                         true => quote! {
                                 #( #attrs )*
-                                async fn #ident(self, context: ::tarpc::context::Context, #( #args ),* , ::tahini_tarpc::sesame::context::UnprotectedContext, ::tahini_tarpc::sesame::policy::Reason) -> #output;
+                                async fn #ident(self, context: ::tarpc::context::Context, #( #args ),* , ::alohomora::context::UnprotectedContext, ::alohomora::policy::Reason) -> #output;
 
                         }
                     }
