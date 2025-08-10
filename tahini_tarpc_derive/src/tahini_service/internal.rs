@@ -495,19 +495,19 @@ impl<'a> ServiceGenerator<'a> {
                      },
                      output,
                  )| {
-                    match check_if_protected_rpc(attrs){
-                        false => {
+                    // match check_if_protected_rpc(attrs){
+                    //     false => {
                             quote! {
                                 #( #attrs )*
                                 async fn #ident(self, context: ::tarpc::context::Context, #( #args ),*) -> #output;
                             }
-                        },
-                        true => quote! {
-                                #( #attrs )*
-                                async fn #ident(self, context: ::tarpc::context::Context, #( #args ),* , ::alohomora::context::UnprotectedContext, ::alohomora::policy::Reason) -> #output;
-
-                        }
-                    }
+                    //     },
+                    //     true => quote! {
+                    //             #( #attrs )*
+                    //             async fn #ident(self, context: ::tarpc::context::Context, #( #args ),* , ::alohomora::context::UnprotectedContext, ::alohomora::policy::Reason) -> #output;
+                    //
+                    //     }
+                    // }
                 },
             );
 
