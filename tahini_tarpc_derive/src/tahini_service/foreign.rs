@@ -644,7 +644,7 @@ impl<'a> ServiceGenerator<'a> {
         quote! {
             /// The request sent over the wire from the client to the server.
             #[allow(missing_docs)]
-            #[derive(::serde::Deserialize, ::tahini_tarpc_derive::TahiniType, Clone, Debug)]
+            #[derive(::serde::Deserialize, ::tahini_tarpc::TahiniType, Clone, Debug)]
             #derives
             #vis enum #request_ident {
                 #(
@@ -683,7 +683,7 @@ impl<'a> ServiceGenerator<'a> {
         quote! {
             /// The response sent over the wire from the server to the client.
             #[allow(missing_docs)]
-            #[derive(::serde::Deserialize, ::tahini_tarpc_derive::TahiniType, Clone, Debug)]
+            #[derive(::serde::Deserialize, ::tahini_tarpc::TahiniType, Clone, Debug)]
             #derives
             #vis enum #response_ident {
                 #( #camel_case_idents(#variants) ),*,
