@@ -1,14 +1,17 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, OnceLock, RwLock};
 use std::task::Poll;
 
 use aws_lc_rs::aead::RandomizedNonceKey;
 
+use hoodini_core::types::ClientId;
 //FIXME: Hide this behind an attestation flag
 use hoodini_server::get_key_for_client;
 
+use crate::transport::{KeyEngine, ServerEngine};
 use crate::{enums::TahiniSafeWrapper, traits::TahiniType};
 use futures::{FutureExt, Sink, Stream};
 use pin_project_lite::pin_project;
@@ -20,6 +23,9 @@ use tarpc::server::{Config, TrackedRequest};
 use tarpc::{ChannelError, ClientMessage, Response, ServerError, Transport};
 
 use super::transport::{KeyEngineState, TahiniTransportTrait};
+
+///Async-safe mapping between sidecar-provided ClientIds and their associated AES session keys.
+pub type ClientMap = Arc<RwLock<HashMap<ClientId, RandomizedNonceKey>>>;
 
 pub trait TahiniChannel
 where
@@ -48,7 +54,7 @@ pin_project! {
     {
         #[pin]
         channel: TarpcBaseChannel<Req, TahiniSafeWrapper<Resp>, Trans::InnerChannelType>,
-        key_engine:  KeyEngineState
+        key_engine:  KeyEngine,
     }
 }
 
@@ -65,7 +71,10 @@ where
             key_engine: engine,
         }
     }
-    pub fn with_defaults(transport: Trans) -> Self {
+    pub fn with_defaults(
+        transport: Trans,
+        client_map: HashMap<Arc<RwLock<ClientId>>, RandomizedNonceKey>,
+    ) -> Self {
         let engine = transport.get_engine();
         Self {
             channel: TarpcBaseChannel::with_defaults(transport.get_inner()),
@@ -188,7 +197,8 @@ pub trait TahiniServe {
         self,
         ctx: Context,
         req: Self::Req,
-        lock_ref: Arc<OnceLock<RandomizedNonceKey>>,
+        engine_ref: &ServerEngine,
+        // lock_ref: Arc<OnceLock<RandomizedNonceKey>>,
     ) -> Result<Self::Resp, ServerError>
     where
         Self: Sized;
@@ -198,16 +208,15 @@ pub trait TahiniServe {
 #[derive(Clone)]
 struct ServeAdapter<T: TahiniServe> {
     tahini_serve: T,
-    key_engine: KeyEngineState,
+    key_engine: KeyEngine,
 }
 impl<T: TahiniServe> ServeAdapter<T> {
-    fn new(tahini_serve: T, key_engine: KeyEngineState) -> Self {
+    fn new(tahini_serve: T, key_engine: KeyEngine) -> Self {
         Self {
             tahini_serve,
             key_engine,
         }
     }
-
 }
 
 pub fn get_session_key_for_client(client_id: usize) -> RandomizedNonceKey {
@@ -229,17 +238,29 @@ impl<T: TahiniServe> TarpcServe for ServeAdapter<T> {
         //         .map(|res| res.map(|rsp| TahiniSafeWrapper(rsp)))
         //         .await;
         // }
-
-        if self.key_engine.key.get().is_none() {
-            self.tahini_serve
-                .attest_serve(ctx, req, self.key_engine.key)
-                .map(|res| res.map(|rsp| TahiniSafeWrapper(rsp)))
-                .await
-        } else {
-            self.tahini_serve
-                .serve(ctx, req)
-                .map(|res| res.map(|rsp| TahiniSafeWrapper(rsp)))
-                .await
+        //
+        match self.key_engine {
+            KeyEngine::Server(ref engine) => {
+                match self.key_engine.get_key() {
+                    //Key is already set, we can handle application RPCs
+                    Some(_) => {
+                        self.tahini_serve
+                            .serve(ctx, req)
+                            .map(|res| res.map(TahiniSafeWrapper))
+                            .await
+                    }
+                    None => {
+                        self.tahini_serve
+                            .attest_serve(ctx, req, engine)
+                            .map(|res| res.map(TahiniSafeWrapper))
+                            .await
+                    }
+                }
+            }
+            KeyEngine::Client(_) => Err(ServerError::new(
+                std::io::ErrorKind::Other,
+                "Bad Tahini channel with server".to_string(),
+            )),
         }
     }
     // fn method(&self, request: &Self::Req) -> Option<&'static str> {

@@ -4,6 +4,7 @@ use crate::enums::TahiniSafeWrapper;
 //     deserialize_tahini_type, serialize_tahini_type, TahiniType, TahiniType2,
 // };
 use crate::traits::{Fromable, TahiniTransformInto, TahiniType};
+use crate::transport::KeyEngine;
 use pin_project_lite::pin_project;
 use std::thread::sleep;
 use std::time::Duration;
@@ -16,18 +17,18 @@ use tarpc::client::RequestDispatch as TarpcRequestDispatch;
 use tarpc::client::{Config, RpcError};
 use tarpc::{context, ChannelError, ClientMessage, Response, Transport};
 
-use super::transport::{KeyEngineState, TahiniTransportTrait};
+use super::transport::TahiniTransportTrait;
 
 #[derive(Clone)]
 pub struct TahiniChannel<Req: TahiniType, Resp: TahiniType> {
     channel: TarpcChannel<TahiniSafeWrapper<Req>, Resp>,
-    engine: KeyEngineState,
+    engine: KeyEngine,
 }
 
 impl<'a, Req: TahiniType, Resp: TahiniType> TahiniChannel<Req, Resp> {
     pub(crate) fn new(
         channel: TarpcChannel<TahiniSafeWrapper<Req>, Resp>,
-        engine: KeyEngineState,
+        engine: KeyEngine,
     ) -> Self {
         Self { channel, engine }
     }
@@ -107,12 +108,10 @@ impl<Req: TahiniType + Clone, Resp: TahiniType> TahiniStub for TahiniChannel<Req
     ) -> Result<Self::Resp, RpcError> {
         //Ensure the key has been initialized to avoid subsequent requests from doubling the key
         //exchange
-        //FIXME: Even if Sesame compiles with the below line, applications that try to use it
-        //can't.
-        //I even removed the "once_wait" feature from lib.rs, and it still compiles.
-        //So for now, spin lock, unless we can bump the whole toolchain to 1.85 nightly
-        // self.engine.key.wait();
-        if self.engine.key.get().is_none() {
+        //FIXME: If another application thread tries to connect to the server without having
+        //received the attestation ack, we sleep.
+        //In practice, if connections are created at service start, this should never happen
+        if let None = self.engine.get_key() {
             println!("Engine is none");
             sleep(Duration::from_secs(2));
         }
@@ -179,6 +178,7 @@ impl<Req: TahiniType + Clone, Resp: TahiniType> TahiniStub for TahiniChannel<Req
         service_name: &'static str,
         wrap_closure: KeyShareWrapClosure,
     ) -> Result<bool, RpcError> {
+        //FIXME: Could be a CLI argument eventually
         let client_attest_config = Path::new("./client_attestation_config.toml");
         let attest_verifier = DynamicAttestationVerifier::from_config(client_attest_config)
             .expect("Couldn't load config");
@@ -193,14 +193,7 @@ impl<Req: TahiniType + Clone, Resp: TahiniType> TahiniStub for TahiniChannel<Req
                     .channel
                     .call(ctx, request_name, TahiniSafeWrapper(req))
                     .await?;
-                self.engine
-                    .key
-                    .set(aes_key)
-                    .expect("Key is already initialized for this session");
-                self.engine
-                    .passthrough
-                    .set(true)
-                    .expect("Attestation should be running only once");
+                self.engine.set_key(aes_key).expect("Key is already initialized for this session");
                 Ok(true)
             }
             Err(e) => {

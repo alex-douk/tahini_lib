@@ -2,11 +2,14 @@
 //               using scrutinizer.
 pub use aws_lc_rs::aead::RandomizedNonceKey as TahiniChannelKey;
 use aws_lc_rs::aead::{Aad, Nonce};
+use hoodini_core::types::ClientId;
 use pin_project_lite::pin_project;
 use serde::{Deserialize, Serialize};
+use std::clone;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, OnceLock, RwLock};
 use tarpc::serde_transport::Transport;
 use tarpc::Transport as TransportTrait;
 use tokio_serde::{Deserializer, Serializer};
@@ -16,11 +19,101 @@ use tokio_util::{
     codec::{Framed, LengthDelimitedCodec},
 };
 
+use crate::server::ClientMap;
+
 #[derive(Clone)]
 pub struct KeyEngineState {
     pub key: Arc<OnceLock<TahiniChannelKey>>,
     pub passthrough: Arc<OnceLock<bool>>,
     // pub session_id: Arc<OnceLock<u64>>
+}
+
+#[derive(Clone)]
+pub struct ClientEngine {
+    pub key: Arc<OnceLock<TahiniChannelKey>>,
+}
+
+#[derive(Clone)]
+pub struct ServerEngine {
+    pub key: Arc<OnceLock<TahiniChannelKey>>,
+    pub passthrough: Arc<OnceLock<bool>>,
+    pub client_map: ClientMap,
+}
+
+impl ServerEngine {
+    pub fn set_session_key(&self, client_id: usize) -> Result<(), String> {
+        let mut map_lock = self.client_map.try_write().map_err(|_| "Couldn't get a lock on the session map".to_string())?;
+        match map_lock.remove(&ClientId::from(client_id)) {
+            None => Err("Client ID not found in map".to_string()),
+            Some(key) => self.key.set(key).map_err(|_| "Key was already set for this session".to_string())
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum KeyEngine {
+    Client(ClientEngine),
+    Server(ServerEngine),
+}
+
+impl KeyEngine {
+    pub(crate) fn new_client() -> Self {
+        KeyEngine::Client(ClientEngine {
+            key: Arc::new(OnceLock::new()),
+        })
+    }
+
+    pub(crate) fn new_server(client_map: ClientMap) -> Self {
+        KeyEngine::Server(ServerEngine {
+            key: Arc::new(OnceLock::new()),
+            passthrough: Arc::new(OnceLock::new()),
+            client_map,
+        })
+    }
+
+
+    ///Gets the current session key if it exists
+    pub(crate) fn get_key(&self) -> Option<&TahiniChannelKey> {
+        match self {
+            Self::Client(ref client) => client.key.get(),
+            Self::Server(ref server) => server.key.get(),
+        }
+    }
+
+    ///Sets the key for the current underlying channel
+    pub fn set_key(&self, key: TahiniChannelKey) -> Result<(), TahiniChannelKey> {
+        match self {
+            Self::Client(ref client) => client.key.set(key),
+            Self::Server(ref server) => server.key.set(key),
+        }
+    }
+
+    ///Handles skipping encryption under the following logic:
+    ///- Clients always encrypt if the key is set
+    ///- Servers only encrypt with a set key after the return path of the attestation handshake.
+    ///
+    ///This means that for the server variant, we can immediately set the flag as the first time it
+    ///is read is during the attestation handshake.
+    ///For the client, we can always return a set flag as the key is only set after the handshake
+    ///completes.
+    ///
+    ///To avoid acquiring an additional lock, we do not check if the key is set here.
+    ///The invokation sites of this method apply the above key context.
+    pub(crate) fn passthrough(&mut self) -> Option<bool> {
+        match self {
+            Self::Server(ref server) => match server.passthrough.get() {
+                //Flag unset, we set before returning
+                None => {
+                    let _ = server.passthrough.set(true);
+                    None
+                }
+                //Flag already set, we just propagate it
+                Some(_) => Some(true),
+            },
+            //Client
+            Self::Client(_) => Some(true),
+        }
+    }
 }
 
 impl KeyEngineState {
@@ -37,14 +130,14 @@ pub struct TahiniTransport<S, Item, SinkItem, Codec> {
         #[pin]
         pub(crate) transport:
             Transport<S, Item, SinkItem, TahiniEncryptionLayer<Item, SinkItem, Codec>>,
-        pub key_engine: KeyEngineState,
+        pub key_engine: KeyEngine,
     }
 }
 
 pub trait TahiniTransportTrait<SinkItem, Item> {
     type InnerChannelType: TransportTrait<SinkItem, Item>;
 
-    fn get_engine(&self) -> KeyEngineState;
+    fn get_engine(&self) -> KeyEngine;
 
     fn get_inner(self) -> Self::InnerChannelType;
 }
@@ -60,7 +153,7 @@ where
     type InnerChannelType =
         Transport<S, Item, SinkItem, TahiniEncryptionLayer<Item, SinkItem, Codec>>;
 
-    fn get_engine(&self) -> KeyEngineState {
+    fn get_engine(&self) -> KeyEngine {
         self.key_engine.clone()
     }
 
@@ -70,7 +163,27 @@ where
 }
 
 //FIXME: Encryption should only exist if attestation is required.
-pub fn new_tahini_transport<'a, S, Item, SinkItem, Codec>(
+fn new_tahini_transport<'a, S, Item, SinkItem, Codec>(
+    framed_io: Framed<S, LengthDelimitedCodec>,
+    codec: Codec,
+    engine: KeyEngine,
+) -> TahiniTransport<S, Item, SinkItem, Codec>
+where
+    S: tokio::io::AsyncWrite + tokio::io::AsyncRead,
+    Item: for<'de> Deserialize<'de> + Debug,
+    SinkItem: Serialize,
+    Codec: Serializer<SinkItem> + Deserializer<Item>,
+{
+    let encryption_layer: TahiniEncryptionLayer<Item, SinkItem, Codec> =
+        TahiniEncryptionLayer::new(codec, engine.clone());
+
+    TahiniTransport {
+        transport: tarpc::serde_transport::new(framed_io, encryption_layer),
+        key_engine: engine,
+    }
+}
+
+pub fn new_tahini_client_transport<'a, S, Item, SinkItem, Codec>(
     framed_io: Framed<S, LengthDelimitedCodec>,
     codec: Codec,
 ) -> TahiniTransport<S, Item, SinkItem, Codec>
@@ -80,18 +193,26 @@ where
     SinkItem: Serialize,
     Codec: Serializer<SinkItem> + Deserializer<Item>,
 {
-    let engine = KeyEngineState::new();
-    let key_engine = engine.clone();
-    let encryption_layer: TahiniEncryptionLayer<Item, SinkItem, Codec> =
-        TahiniEncryptionLayer::new(codec, engine);
-
-    TahiniTransport {
-        transport: tarpc::serde_transport::new(framed_io, encryption_layer),
-        key_engine,
-    }
+    let engine = KeyEngine::new_client();
+    new_tahini_transport(framed_io, codec, engine)
 }
 
-#[derive(Serialize, Deserialize)]
+pub fn new_tahini_server_transport<'a, S, Item, SinkItem, Codec>(
+    framed_io: Framed<S, LengthDelimitedCodec>,
+    codec: Codec,
+    client_map: ClientMap,
+) -> TahiniTransport<S, Item, SinkItem, Codec>
+where
+    S: tokio::io::AsyncWrite + tokio::io::AsyncRead,
+    Item: for<'de> Deserialize<'de> + Debug,
+    SinkItem: Serialize,
+    Codec: Serializer<SinkItem> + Deserializer<Item>,
+{
+    let engine = KeyEngine::new_server(client_map);
+    new_tahini_transport(framed_io, codec, engine)
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SerializedCipher {
     bytes: Vec<u8>,
     nonce: [u8; 12],
@@ -105,7 +226,7 @@ pin_project! {
         inner_channel: C,
         item: PhantomData<Item>,
         sink: PhantomData<SinkItem>,
-        key_state: KeyEngineState,
+        key_state: KeyEngine,
     }
 }
 
@@ -113,7 +234,7 @@ impl<C, Item, SinkItem> TahiniEncryptionLayer<Item, SinkItem, C>
 where
     C: Serializer<SinkItem> + Deserializer<Item>,
 {
-    pub(crate) fn new(codec: C, engine: KeyEngineState) -> Self {
+    pub(crate) fn new(codec: C, engine: KeyEngine) -> Self {
         Self {
             inner_channel: codec,
             item: PhantomData,
@@ -159,8 +280,8 @@ where
         self: std::pin::Pin<&mut Self>,
         item: &SinkItem,
     ) -> Result<tokio_util::bytes::Bytes, Self::Error> {
-        let key_engine = self.key_state.clone();
-        let key_opt = key_engine.key.get();
+        let mut key_engine = self.key_state.clone();
+        let key_opt = key_engine.get_key();
         // match self.encrypt {
         //     false => key_opt = None,
         //     true => ()
@@ -169,9 +290,8 @@ where
         match key_opt {
             None => C::serialize(self.project().inner_channel, item)
                 .map_err(|_| TahiniChannelLayerError::wrapper_err("Keyshare ser error")),
-            Some(key) => match key_engine.passthrough.get() {
+            Some(key) => match key_engine.passthrough() {
                 None => {
-                    let _ = key_engine.passthrough.set(true);
                     return C::serialize(self.project().inner_channel, item)
                         .map_err(|_| TahiniChannelLayerError::wrapper_err("Keyshare ser error"));
                 }
@@ -211,8 +331,8 @@ where
         self: std::pin::Pin<&mut Self>,
         src: &tokio_util::bytes::BytesMut,
     ) -> Result<Item, Self::Error> {
-        let arc_cloned = self.key_state.key.clone();
-        let key_opt = arc_cloned.get();
+        let arc_cloned = self.key_state.clone();
+        let key_opt = arc_cloned.get_key();
 
         // match self.encrypt {
         //     false => key_opt = None,
