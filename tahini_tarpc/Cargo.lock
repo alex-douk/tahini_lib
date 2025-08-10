@@ -1467,11 +1467,11 @@ dependencies = [
 [[package]]
 name = "hoodini_client"
 version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib?rev=c651aad#c651aad9d53a9f408ec1605e21d792478e9bf218"
+source = "git+https://github.com/alex-douk/tahini_lib?rev=b02fb68fa53d0da1832d3c72971295a763b4ef76#b02fb68fa53d0da1832d3c72971295a763b4ef76"
 dependencies = [
  "aws-lc-rs",
  "hex",
- "hoodini_core 0.1.0 (git+https://github.com/alex-douk/tahini_lib?rev=c651aad)",
+ "hoodini_core",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -1483,38 +1483,7 @@ dependencies = [
 [[package]]
 name = "hoodini_core"
 version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib?branch=separate_crates#004ba8263d3499e394c18ec5d5e2d9715ef78cf7"
-dependencies = [
- "aws-lc-rs",
- "hex",
- "libc",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tarpc 0.36.0",
- "tokio-util 0.7.15",
- "toml",
-]
-
-[[package]]
-name = "hoodini_core"
-version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib?branch=standalone_tahini#69e8f018a40d6d38c6fff670b93d1b2d93711e0f"
-dependencies = [
- "aws-lc-rs",
- "hex",
- "libc",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tokio-util 0.7.15",
- "toml",
-]
-
-[[package]]
-name = "hoodini_core"
-version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib?rev=c651aad#c651aad9d53a9f408ec1605e21d792478e9bf218"
+source = "git+https://github.com/alex-douk/tahini_lib?rev=b02fb68fa53d0da1832d3c72971295a763b4ef76#b02fb68fa53d0da1832d3c72971295a763b4ef76"
 dependencies = [
  "aws-lc-rs",
  "hex",
@@ -1530,11 +1499,11 @@ dependencies = [
 [[package]]
 name = "hoodini_server"
 version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib?branch=standalone_tahini#69e8f018a40d6d38c6fff670b93d1b2d93711e0f"
+source = "git+https://github.com/alex-douk/tahini_lib?rev=b02fb68fa53d0da1832d3c72971295a763b4ef76#b02fb68fa53d0da1832d3c72971295a763b4ef76"
 dependencies = [
  "aws-lc-rs",
  "hex",
- "hoodini_core 0.1.0 (git+https://github.com/alex-douk/tahini_lib?branch=standalone_tahini)",
+ "hoodini_core",
  "lazy_static",
 ]
 
@@ -3827,7 +3796,7 @@ dependencies = [
  "erased-serde 0.4.6",
  "futures",
  "hoodini_client",
- "hoodini_core 0.1.0 (git+https://github.com/alex-douk/tahini_lib?branch=separate_crates)",
+ "hoodini_core",
  "hoodini_server",
  "pin-project-lite",
  "serde",

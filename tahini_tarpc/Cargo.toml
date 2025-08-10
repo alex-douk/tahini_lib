@@ -17,9 +17,9 @@ tokio = { version = "=1.42.0", features = ["io-std", "io-util", "rt", "mio", "li
 
 alohomora = {version = "0.1.0", git = "https://github.com/brownsys/Sesame", branch = "extensions_devel"}
 tahini_tarpc_derive ={version = "0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini", optional = true}
-hoodini_core = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini", features=["attest"]}
-hoodini_client = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib"}
-hoodini_server = {version = "0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini"}
+hoodini_core =   {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", rev = "b02fb68fa53d0da1832d3c72971295a763b4ef76", features=["attest"]}
+hoodini_client = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", rev = "b02fb68fa53d0da1832d3c72971295a763b4ef76"}
+hoodini_server = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", rev = "b02fb68fa53d0da1832d3c72971295a763b4ef76"}
 async-trait = "0.1.83"
 tokio-serde = { version = "0.8.0", features = ["serde_json", "json"] }
 tokio-util = "0.7.13"
