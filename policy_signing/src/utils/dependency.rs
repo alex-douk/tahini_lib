@@ -44,14 +44,17 @@ fn find_sesame_crate(tcx: TyCtxt<'_>) -> Option<CrateNum> {
         .copied()
 }
 
-fn find_policy_trait_def_id(tcx: TyCtxt<'_>, sesame_crate_num: CrateNum) -> DefId {
+fn find_policy_trait_def_id(tcx: TyCtxt<'_>, sesame_crate_num: CrateNum) -> Option<DefId> {
+    //TODO: We are parsing Sesame's list of traits every single time.
+    //Isn't there a better way to handle that? Need to check if CrateNum of a shared dependency
+    //changes between crates.
     let traits = tcx.traits(sesame_crate_num);
     let pol_trait = traits
         .iter()
         .find(|&tr| tcx.def_path_str(tr) == "alohomora::policy::Policy");
+
     pol_trait
         .copied()
-        .expect("Couldn't find policy trait in Sesame")
 }
 
 fn hash_impls_of_trait(tcx: TyCtxt<'_>, trait_id: DefId) -> Option<HashMap<String, String>> {
@@ -136,10 +139,12 @@ impl Crate {
     pub fn from_compiler(tcx: TyCtxt<'_>) -> Option<Self> {
         match find_sesame_crate(tcx) {
             Some(sesame_crate_num) => {
-                let pol_id = find_policy_trait_def_id(tcx, sesame_crate_num);
+                let crate_name = tcx.crate_name(LOCAL_CRATE).to_ident_string();
+                log::trace!("Found Sesame: Analyzing crate {:?}", crate_name);
+                let pol_id_opt = find_policy_trait_def_id(tcx, sesame_crate_num);
                 Some(Self {
                         my_crate_name: tcx.crate_name(LOCAL_CRATE).to_ident_string(),
-                        local_implementations_stable_hashes: hash_impls_of_trait(tcx, pol_id).unwrap_or_default(),
+                        local_implementations_stable_hashes: pol_id_opt.map(|pol_id| hash_impls_of_trait(tcx, pol_id)).flatten().unwrap_or_default(),
                         dependencies_names: Vec::new(),
                         dependencies_hashes: Vec::new(),
                 })
@@ -180,7 +185,7 @@ impl Crate {
             .collect();
         my_deps_vec.sort();
         self.dependencies_names = my_deps_vec;
-        // trace!("For crate : {:?}, pruned dependencies are : {:#?}", self.my_crate_name, &self.dependencies_names);
+        trace!("For crate : {:?}, pruned dependencies are : {:#?}", self.my_crate_name, &self.dependencies_names);
         Ok(())
     }
 
@@ -204,7 +209,7 @@ impl Crate {
         }
         dep_hashes.sort_by_key(|x| x.0);
         self.dependencies_hashes = dep_hashes.into_iter().map(|x| x.1).collect();
-        // trace!("For crate : {:?}, dependencies hashes are : {:#?}", self.my_crate_name, &self.dependencies_hashes);
+        trace!("For crate : {:?}, dependencies hashes are : {:#?}", self.my_crate_name, &self.dependencies_hashes);
         Ok(())
     }
 
