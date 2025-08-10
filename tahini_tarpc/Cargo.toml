@@ -16,7 +16,7 @@ serde_json = { version = "1.0.141", features = ["preserve_order"] }
 tokio = { version = "=1.42.0", features = ["io-std", "io-util", "rt", "mio", "libc"] }
 
 alohomora = {version = "0.1.0", git = "https://github.com/brownsys/Sesame", branch = "extensions_devel"}
-tahini_tarpc_derive ={version = "0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini"}
+tahini_tarpc_derive ={version = "0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini", optional = true}
 hoodini_core = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "separate_crates", features=["attest"]}
 hoodini_client = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", rev="c651aad"}
 hoodini_server = {version = "0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini"}
@@ -35,4 +35,4 @@ futures = "0.3.31"
 funty = { git = "https://github.com/bitvecto-rs/funty/", rev = "7ef0d890fbcd8b3def1635ac1a877fc298488446" }
 
 [features]
-derive = [""]
+derive = ["dep:tahini_tarpc_derive"]
