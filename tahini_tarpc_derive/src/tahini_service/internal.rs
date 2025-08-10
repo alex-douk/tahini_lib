@@ -601,13 +601,15 @@ impl<'a> ServiceGenerator<'a> {
                 async fn attest_serve(self,
                     ctx: ::tarpc::context::Context,
                     req: #request_ident,
-                    lock_ref: ::std::sync::Arc<::std::sync::OnceLock<::tahini_tarpc::transport::TahiniChannelKey>>)
+                    engine: &::tahini_tarpc::transport::ServerEngine)
                     -> ::core::result::Result<#response_ident, ::tarpc::ServerError>{
                         match req {
                             #request_ident::TahiniAttestVariant(client_id) => {
-                                let key = ::tahini_tarpc::server::get_session_key_for_client(client_id);
-                                lock_ref.set(key);
-                                ::core::result::Result::Ok(#response_ident::TahiniAttestVariant)
+                                match engine.set_session_key(client_id) {
+                                    Ok(_) => ::core::result::Result::Ok(#response_ident::TahiniAttestVariant),
+                                    Err(e) => ::core::result::Result::Err(::tarpc::ServerError::new(::std::io::ErrorKind::Other, e))
+
+                                }
                             },
                             _ => ::core::result::Result::Err(::tarpc::ServerError::new(::std::io::ErrorKind::InvalidInput, "Wrong datatype for attestation".to_string()))
                         }
