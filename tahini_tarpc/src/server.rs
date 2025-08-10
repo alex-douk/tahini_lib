@@ -73,7 +73,6 @@ where
     }
     pub fn with_defaults(
         transport: Trans,
-        client_map: HashMap<Arc<RwLock<ClientId>>, RandomizedNonceKey>,
     ) -> Self {
         let engine = transport.get_engine();
         Self {

@@ -99,7 +99,7 @@ impl KeyEngine {
     ///
     ///To avoid acquiring an additional lock, we do not check if the key is set here.
     ///The invokation sites of this method apply the above key context.
-    pub(crate) fn passthrough(&mut self) -> Option<bool> {
+    pub(crate) fn passthrough(&self) -> Option<bool> {
         match self {
             Self::Server(ref server) => match server.passthrough.get() {
                 //Flag unset, we set before returning
