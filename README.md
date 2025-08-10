@@ -27,14 +27,36 @@ just do_all <PROJECT_ROOT>
 
 # Repository contents
 
-This repository currently contains all data structures that enable the two-stage attestation of Tahini services.
+This repository contains all system components of Tahini:
 
-## Attestation data structures 
-Used by Sesame (currently, WIP) for each Tahini client and server.
+
+## Tahini RPC framework
+Contains both the core network logic, application-safe interfaces, and the associated derive macros.
+Is currently entwined with the attestation protocol, and the encryption.
+
+
+## ScopeLight attestation
+Libraries for the `ScopeLight` attestation protocol.
+Contains core types, client-side interfaces, server-side interfaces, and sidecar interfaces.
+
+Note the server-side interface should NOT be imported anywhere unless you want to be attested to by the sidecar.
+
 
 ## Sidecar
-Trusted process launching Tahini processes and enabler of runtime attestation protocol.
+The runtime trusted launcher that is responsible for starting Tahini-attested services.
+Currently starts services via means of the `std::process::Command` and passes security-critical information via means of command-line arguments.
 
 ## Certificate creation
-Build toolchain that turns source code into static guarantees embedded in a signed certificate.
+Tahini and ScopeLight depend upon certificates that are generated during compilation.
+Currently the certificates embed a tree of all dependencies that use Sesame policies, and a hash for each associated policy implementation.
+TODO: Critical regions hashes over source code.
+Scrutinizer config file.
 
+
+# Missing from the repository
+
+## Dylints
+Dylints for SesameType implementation + no extensions + well-formedness of Tahini codegen.
+
+## End-to-end trusted compilation toolchain.
+Requires to atomically compile, run scrutinizer, check dylints, and generate certificates.
