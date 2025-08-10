@@ -195,6 +195,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let hash = hash_bin(Path::new(&bin_setup.bin_path.clone())).expect("Couldn't hash binary");
         let handler =
             launch_binary(bin_setup.bin_path, bin_setup.run_path).expect("Couldn't start binary");
+        //FIXME: If a server forgets to import the FIFO handler, the below function hangs
+        //THis is because pipes are blocking unti they are resolved on both writes and reads.
+        //As the receiving server does not have a handler, the sidecar waits indefinitely for the
+        //service.
+        //Either have a timer, or a trusted compilation way of verifying the construction exists.
+        //Something like only generate certificates for binaries that have to run with a sidecar.
         server
             .setup_service_key_channel(
                 config
