@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 use alohomora::bbox::BBox;
 use alohomora::policy::Policy;
 
-use alohomora::extension::SesamePConExtension;
 use crate::context::TahiniContext;
 use crate::{TahiniEnum, TahiniVariantsEnum};
+use alohomora::extension::SesamePConExtension;
 
 use super::{TahiniError, TahiniType};
 
@@ -21,8 +21,8 @@ pub trait PolicyInto<TargetPolicy: Policy>: Policy {
     fn into_policy(self, context: &TahiniContext) -> Result<TargetPolicy, String>;
 }
 
-impl<RemotePolicy: Policy, LocalPolicy: Policy + PolicyFrom<RemotePolicy>>
-    PolicyInto<LocalPolicy> for RemotePolicy
+impl<RemotePolicy: Policy, LocalPolicy: Policy + PolicyFrom<RemotePolicy>> PolicyInto<LocalPolicy>
+    for RemotePolicy
 {
     fn into_policy(self, context: &TahiniContext) -> Result<LocalPolicy, String> {
         LocalPolicy::from_policy(self, &context)
@@ -38,7 +38,6 @@ impl<P: Policy> PolicyFrom<P> for P {
         Ok(other_policy)
     }
 }
-
 
 ///Contains either an Uninitialized context from the wire, or an initialized one for local
 ///transformation
@@ -160,7 +159,10 @@ pub trait TahiniTransformInto<TargetType> {
 
 struct BBoxPolicyTransformatorInto<'a>(&'a TahiniContext);
 
-impl<T, SourcePolicy: PolicyInto<TargetPolicy>, TargetPolicy: Policy> SesamePConExtension<T, SourcePolicy, Result<BBox<T, TargetPolicy>, String>> for BBoxPolicyTransformatorInto<'_> {
+impl<T, SourcePolicy: PolicyInto<TargetPolicy>, TargetPolicy: Policy>
+    SesamePConExtension<T, SourcePolicy, Result<BBox<T, TargetPolicy>, String>>
+    for BBoxPolicyTransformatorInto<'_>
+{
     fn apply(self, data: T, policy: SourcePolicy) -> Result<BBox<T, TargetPolicy>, String> {
         Ok(BBox::new(data, policy.into_policy(self.0)?))
     }
@@ -169,8 +171,6 @@ impl<T, SourcePolicy: PolicyInto<TargetPolicy>, TargetPolicy: Policy> SesamePCon
         unreachable!("We never transform by reference.")
     }
 }
-
-
 
 impl<T, SourcePolicy: PolicyInto<TargetPolicy>, TargetPolicy: Policy>
     TahiniTransformInto<BBox<T, TargetPolicy>> for BBox<T, SourcePolicy>

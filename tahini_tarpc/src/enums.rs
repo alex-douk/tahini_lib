@@ -1,12 +1,10 @@
-use alohomora::{bbox::BBox, policy::Policy};
-use alohomora::policy::TahiniPolicy;
-use serde::{Deserialize, Serialize};
 use crate::traits::{TahiniError, TahiniType};
-use serde::ser::{SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTupleVariant};
-use std::collections::HashMap;
 use alohomora::extension::SesamePConExtension;
-
-
+use alohomora::policy::TahiniPolicy;
+use alohomora::{bbox::BBox, policy::Policy};
+use serde::ser::{SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTupleVariant};
+use serde::Serialize;
+use std::collections::HashMap;
 
 pub enum TahiniEnum {
     Value(Box<dyn erased_serde::Serialize>),
@@ -18,7 +16,6 @@ pub enum TahiniEnum {
     Result(Result<Box<TahiniEnum>, Box<dyn TahiniError>>),
 }
 
-
 pub enum TahiniVariantsEnum {
     Unit,
     Struct(HashMap<&'static str, TahiniEnum>),
@@ -28,8 +25,9 @@ pub enum TahiniVariantsEnum {
 
 struct BBoxSerializer<S: serde::Serializer>(S);
 
-impl<T, P: Policy, S: serde::Serializer> SesamePConExtension<T, P, Result<S::Ok, S::Error>> for BBoxSerializer<S> 
-where 
+impl<T, P: Policy, S: serde::Serializer> SesamePConExtension<T, P, Result<S::Ok, S::Error>>
+    for BBoxSerializer<S>
+where
     T: Serialize,
     P: Serialize,
     S: serde::Serializer,
@@ -140,5 +138,3 @@ impl<T: TahiniType + Sized> serde::Serialize for TahiniSafeWrapper<T> {
         PrivEnumWrapper(&self.0.to_tahini_enum()).serialize(serializer)
     }
 }
-
-

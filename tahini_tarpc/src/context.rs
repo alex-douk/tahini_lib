@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    marker::PhantomData,
-};
+use std::{collections::HashMap, marker::PhantomData};
 
 use serde::{Deserialize, Serialize};
 

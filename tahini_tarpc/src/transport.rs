@@ -5,28 +5,19 @@ use aws_lc_rs::aead::{Aad, Nonce};
 use hoodini_core::types::ClientId;
 use pin_project_lite::pin_project;
 use serde::{Deserialize, Serialize};
-use std::clone;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::sync::{Arc, OnceLock, RwLock};
+use std::sync::{Arc, OnceLock};
 use tarpc::serde_transport::Transport;
-use tarpc::Transport as TransportTrait;
-use tokio_serde::{Deserializer, Serializer};
-use tokio_util::bytes::Bytes;
-use tokio_util::{
+use tarpc::tokio_serde::{Deserializer, Serializer};
+use tarpc::tokio_util::{
     bytes::BytesMut,
     codec::{Framed, LengthDelimitedCodec},
 };
+use tarpc::Transport as TransportTrait;
+use tokio_util::bytes::Bytes;
 
 use crate::server::ClientMap;
-
-#[derive(Clone)]
-pub struct KeyEngineState {
-    pub key: Arc<OnceLock<TahiniChannelKey>>,
-    pub passthrough: Arc<OnceLock<bool>>,
-    // pub session_id: Arc<OnceLock<u64>>
-}
 
 #[derive(Clone)]
 pub struct ClientEngine {
@@ -42,10 +33,16 @@ pub struct ServerEngine {
 
 impl ServerEngine {
     pub fn set_session_key(&self, client_id: usize) -> Result<(), String> {
-        let mut map_lock = self.client_map.try_write().map_err(|_| "Couldn't get a lock on the session map".to_string())?;
+        let mut map_lock = self
+            .client_map
+            .try_write()
+            .map_err(|_| "Couldn't get a lock on the session map".to_string())?;
         match map_lock.remove(&ClientId::from(client_id)) {
             None => Err("Client ID not found in map".to_string()),
-            Some(key) => self.key.set(key).map_err(|_| "Key was already set for this session".to_string())
+            Some(key) => self
+                .key
+                .set(key)
+                .map_err(|_| "Key was already set for this session".to_string()),
         }
     }
 }
@@ -70,7 +67,6 @@ impl KeyEngine {
             client_map,
         })
     }
-
 
     ///Gets the current session key if it exists
     pub(crate) fn get_key(&self) -> Option<&TahiniChannelKey> {
@@ -112,15 +108,6 @@ impl KeyEngine {
             },
             //Client
             Self::Client(_) => Some(true),
-        }
-    }
-}
-
-impl KeyEngineState {
-    pub(crate) fn new() -> Self {
-        Self {
-            key: Arc::new(OnceLock::new()),
-            passthrough: Arc::new(OnceLock::new()),
         }
     }
 }
@@ -280,7 +267,7 @@ where
         self: std::pin::Pin<&mut Self>,
         item: &SinkItem,
     ) -> Result<tokio_util::bytes::Bytes, Self::Error> {
-        let mut key_engine = self.key_state.clone();
+        let key_engine = self.key_state.clone();
         let key_opt = key_engine.get_key();
         // match self.encrypt {
         //     false => key_opt = None,

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, OnceLock, RwLock};
+use std::sync::{Arc, RwLock};
 use std::task::Poll;
 
 use aws_lc_rs::aead::RandomizedNonceKey;
@@ -22,7 +22,7 @@ use tarpc::server::Serve as TarpcServe;
 use tarpc::server::{Config, TrackedRequest};
 use tarpc::{ChannelError, ClientMessage, Response, ServerError, Transport};
 
-use super::transport::{KeyEngineState, TahiniTransportTrait};
+use super::transport::TahiniTransportTrait;
 
 ///Async-safe mapping between sidecar-provided ClientIds and their associated AES session keys.
 pub type ClientMap = Arc<RwLock<HashMap<ClientId, RandomizedNonceKey>>>;
@@ -71,9 +71,7 @@ where
             key_engine: engine,
         }
     }
-    pub fn with_defaults(
-        transport: Trans,
-    ) -> Self {
+    pub fn with_defaults(transport: Trans) -> Self {
         let engine = transport.get_engine();
         Self {
             channel: TarpcBaseChannel::with_defaults(transport.get_inner()),

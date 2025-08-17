@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use erased_serde::serialize_trait_object;
 use serde::{Deserialize, Serialize};
 
@@ -12,11 +10,11 @@ use crate::enums::TahiniEnum;
 struct BBoxEnumator;
 
 //TODO(douk): This should disappear with the new SesameType.
-impl<T, P> alohomora::extension::SesamePConExtension<T, P, TahiniEnum> for BBoxEnumator 
-where 
-        T: Serialize + for<'de> Deserialize<'de> + Clone + Send + 'static,
-        P: Policy + Clone + Serialize + for<'de> Deserialize<'de> + 'static,
-    {
+impl<T, P> alohomora::extension::SesamePConExtension<T, P, TahiniEnum> for BBoxEnumator
+where
+    T: Serialize + for<'de> Deserialize<'de> + Clone + Send + 'static,
+    P: Policy + Clone + Serialize + for<'de> Deserialize<'de> + 'static,
+{
     fn apply(self, data: T, policy: P) -> TahiniEnum {
         let anybox = Box::new(data) as Box<dyn erased_serde::Serialize>;
         TahiniEnum::BBox(BBox::new(anybox, TahiniPolicy::new(policy)))
@@ -25,9 +23,7 @@ where
     fn apply_ref(self, data: &T, policy: &P) -> TahiniEnum {
         let anybox = Box::new(data.clone()) as Box<dyn erased_serde::Serialize>;
         TahiniEnum::BBox(BBox::new(anybox, TahiniPolicy::new(policy.clone())))
-        
     }
-
 }
 
 pub trait TahiniType: Send {
@@ -65,8 +61,6 @@ impl<
     //     self.policy().check(context, reason.clone())
     // }
 }
-
-
 
 impl<T: TahiniType + Clone + 'static> TahiniType for Option<T> {
     fn to_tahini_enum(&self) -> TahiniEnum {
@@ -210,7 +204,8 @@ alohomora_type_tuple_impl!(
     [H, 7],
     [I, 8],
     [J, 9]
-);alohomora_type_tuple_impl!(
+);
+alohomora_type_tuple_impl!(
     [A, 0],
     [B, 1],
     [C, 2],

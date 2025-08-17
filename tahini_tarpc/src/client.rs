@@ -5,12 +5,12 @@ use crate::enums::TahiniSafeWrapper;
 // };
 use crate::traits::{Fromable, TahiniTransformInto, TahiniType};
 use crate::transport::KeyEngine;
+use hoodini_client::DynamicAttestationVerifier;
 use pin_project_lite::pin_project;
-use std::thread::sleep;
-use std::time::Duration;
 use std::future::Future;
 use std::path::Path;
-use hoodini_client::DynamicAttestationVerifier;
+use std::thread::sleep;
+use std::time::Duration;
 use tarpc::client::Channel as TarpcChannel;
 use tarpc::client::NewClient as TarpcNewClient;
 use tarpc::client::RequestDispatch as TarpcRequestDispatch;
@@ -193,7 +193,9 @@ impl<Req: TahiniType + Clone, Resp: TahiniType> TahiniStub for TahiniChannel<Req
                     .channel
                     .call(ctx, request_name, TahiniSafeWrapper(req))
                     .await?;
-                self.engine.set_key(aes_key).expect("Key is already initialized for this session");
+                self.engine
+                    .set_key(aes_key)
+                    .expect("Key is already initialized for this session");
                 Ok(true)
             }
             Err(e) => {
@@ -265,7 +267,7 @@ where
         // if attest {
         //TODO(douk): Attestation should be behind a feature flag (or at least a command-line
         //variable)
-            client.attest_on_launch().await;
+        client.attest_on_launch().await;
         // }
         // #[cfg(feature="attest")]
         // client.attest_on_launch().await;
