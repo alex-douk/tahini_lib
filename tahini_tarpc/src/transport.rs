@@ -1,12 +1,13 @@
 // TODO(babman): we can probably do some work with this to ensure transport/codec are safe, maybe
 //               using scrutinizer.
 pub use aws_lc_rs::aead::RandomizedNonceKey as TahiniChannelKey;
-use aws_lc_rs::aead::{Aad, Nonce};
+use aws_lc_rs::aead::{Aad, Nonce, NONCE_LEN};
 use hoodini_core::types::ClientId;
 use pin_project_lite::pin_project;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::marker::PhantomData;
+use std::convert::TryInto;
 use std::sync::{Arc, OnceLock};
 use tarpc::serde_transport::Transport;
 use tarpc::tokio_serde::{Deserializer, Serializer};
@@ -269,10 +270,8 @@ where
     ) -> Result<tokio_util::bytes::Bytes, Self::Error> {
         let key_engine = self.key_state.clone();
         let key_opt = key_engine.get_key();
-        // match self.encrypt {
-        //     false => key_opt = None,
-        //     true => ()
-        // }
+
+
 
         match key_opt {
             None => C::serialize(self.project().inner_channel, item)
@@ -287,21 +286,23 @@ where
                     let res = C::serialize(inner_codec.as_mut(), item).map_err(|_| {
                         TahiniChannelLayerError::wrapper_err("Payload serialization error")
                     })?;
+
                     let mut cipher_buf = Vec::from(res);
                     let nonce = key
                         .seal_in_place_append_tag(Aad::empty(), &mut cipher_buf)
                         .map_err(|_| TahiniChannelLayerError::wrapper_err("Encryption error"))?;
                     let nonce = nonce.as_ref();
 
-                    let encrypted_struct = SerializedCipher {
-                        bytes: cipher_buf,
-                        nonce: *nonce,
-                    };
-                    let encrypted_serialized =
-                        serde_json::to_vec(&encrypted_struct).map_err(|_| {
-                            TahiniChannelLayerError::wrapper_err("Ciphertext serialization error")
-                        })?;
-                    Ok(Bytes::from(encrypted_serialized))
+                    cipher_buf.extend_from_slice(nonce);
+                    // let encrypted_struct = SerializedCipher {
+                    //     bytes: cipher_buf,
+                    //     nonce: *nonce,
+                    // };
+                    // let encrypted_serialized =
+                    //     serde_json::to_vec(&encrypted_struct).map_err(|_| {
+                    //         TahiniChannelLayerError::wrapper_err("Ciphertext serialization error")
+                    //     })?;
+                    Ok(Bytes::from(cipher_buf))
                 }
             },
         }
@@ -337,11 +338,14 @@ where
                 })
             }
             Some(key) => {
-                let ciphertext: SerializedCipher = serde_json::from_slice(src).map_err(|_| {
-                    TahiniChannelLayerError::wrapper_err("Ciphertext deserialization error")
-                })?;
-                let nonce = Nonce::from(&ciphertext.nonce);
-                let mut cipher = ciphertext.bytes;
+                // let ciphertext: SerializedCipher = serde_json::from_slice(src).map_err(|_| {
+                //     TahiniChannelLayerError::wrapper_err("Ciphertext deserialization error")
+                // })?;
+
+                let (cipher, nonce) = src.split_at(src.len()-NONCE_LEN-1);
+
+                let mut cipher = BytesMut::from(cipher);
+                let nonce = Nonce::from(&<&[u8] as TryInto<[u8;12]>>::try_into(nonce).expect("Malformed nonce"));
                 let plaintext_slice: &[u8] = key
                     .open_in_place(nonce, Aad::empty(), &mut cipher)
                     .map_err(|_| TahiniChannelLayerError::wrapper_err("Decryption error"))?;

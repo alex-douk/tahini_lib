@@ -217,7 +217,7 @@ impl<T: TahiniServe> ServeAdapter<T> {
 }
 
 pub fn get_session_key_for_client(client_id: usize) -> RandomizedNonceKey {
-    let client_id = hoodini_server::ClientId::from(client_id);
+    let client_id = ClientId::from(client_id);
     get_key_for_client(&client_id)
 }
 
