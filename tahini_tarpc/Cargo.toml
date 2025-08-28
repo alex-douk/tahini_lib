@@ -15,11 +15,11 @@ serde_json = { version = "1.0.141", features = ["preserve_order"] }
 # tokio = { version = "1.46.1", features = ["io-std", "io-util", "rt", "mio", "libc", "tokio-macros", "macros", "rt-multi-thread"] }
 # tokio = { version = "1.42.0", features = ["io-std", "io-util", "rt", "mio", "libc"] }
 
-alohomora = {version = "0.1.0", git = "https://github.com/brownsys/Sesame", branch = "extensions_devel"}
-tahini_tarpc_derive ={version = "0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini", optional = true}
-hoodini_core =   {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini", features=["attest"]}
-hoodini_client = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini"}
-hoodini_server = {version="0.1.0", git = "https://github.com/alex-douk/tahini_lib", branch = "standalone_tahini"}
+alohomora = {version = "0.1.0", git = "https://github.com/brownsys/Sesame", branch = "tahini-dev"}
+tahini_tarpc_derive = {path = "../tahini_tarpc_derive", optional = true}
+hoodini_core =   {path="../tahini_attest/crates/hoodini-core", features=["attest"]}
+hoodini_client = {path="../tahini_attest/crates/hoodini-client"}
+hoodini_server = {path="../tahini_attest/crates/hoodini-server"}
 # async-trait = "0.1.83"
 tarpc = { version = "0.34.0", features = ["full"]}
 pin-project-lite = "0.2.14"
@@ -35,7 +35,6 @@ funty = { git = "https://github.com/bitvecto-rs/funty/", rev = "7ef0d890fbcd8b3d
 
 [features]
 derive = ["dep:tahini_tarpc_derive"]
-
 
 [dependencies.url]
 version = "=2.5.0"

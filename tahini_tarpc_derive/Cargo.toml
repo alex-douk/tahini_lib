@@ -14,7 +14,17 @@ attribute-derive = "0.8.1"
 proc-macro2 = "1.0.58"
 quote = "1.0.27"
 syn = { version = "2.0.16", features = [ "full" ] }
+serde = { version = "1.0.219", features = ["derive"] }
 
+[dev-dependencies]
+alohomora = {version = "0.1.0", git = "https://github.com/brownsys/Sesame", branch = "tahini-dev"}
+tahini_tarpc = { version = "0.1.0", path = "../tahini_tarpc", features = ["derive"] }
+tokio = "1.47.1"
+tarpc = { version = "0.34.0", features = ["full"]}
+futures = "0.3.31"
+
+[patch.crates-io]
+funty = { git = "https://github.com/bitvecto-rs/funty/", rev = "7ef0d890fbcd8b3def1635ac1a877fc298488446" }
 
 [features]
 server=[]

@@ -2,7 +2,6 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use serde::{Deserialize, Serialize};
 
-// use super::enumsTahiniEnum, TahiniType};
 use super::enums::TahiniEnum;
 use super::traits::TahiniType;
 
@@ -18,19 +17,16 @@ impl TahiniContext {
         TahiniContext {
             service: service.to_string(),
             rpc: rpc.to_string(),
-            priv_marker: Default::default(),
+            priv_marker: PhantomData,
         }
     }
 }
 
 impl TahiniType for TahiniContext {
-    fn to_tahini_enum(&self) -> super::enums::TahiniEnum {
+    fn to_tahini_enum(self) -> TahiniEnum {
         let mut hash_map = HashMap::new();
-        hash_map.insert(
-            "service",
-            TahiniEnum::Value(Box::new(self.service.to_string())),
-        );
-        hash_map.insert("rpc", TahiniEnum::Value(Box::new(self.rpc.to_string())));
-        super::enums::TahiniEnum::Struct("TahiniContext", hash_map)
+        hash_map.insert("service", TahiniEnum::Value(Box::new(self.service)));
+        hash_map.insert("rpc", TahiniEnum::Value(Box::new(self.rpc)));
+        TahiniEnum::Struct("TahiniContext", hash_map)
     }
 }

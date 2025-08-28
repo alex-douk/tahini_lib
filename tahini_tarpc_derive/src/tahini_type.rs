@@ -1,9 +1,7 @@
 use attribute_derive::FromAttr;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Ident, ItemEnum, ItemStruct,
-    Variant,
-};
+use syn::{Data, DeriveInput, Fields, Ident, ItemEnum, ItemStruct, Variant};
 
 pub type Error = (Span, &'static str);
 
@@ -142,8 +140,8 @@ fn generate_hashmap(attrs: AlohomoraTypeArgs, f: Fields, for_enum: bool) -> Toke
     } else {
         quote! {
                 ::std::collections::HashMap::from([
-                #((#tahini_fields_strings, <#tahini_fields_types as ::tahini_tarpc::traits::TahiniType>::to_tahini_enum(&self.#tahini_fields_idents)),)*
-                #((#verbatim_fields_strings, ::tahini_tarpc::enums::TahiniEnum::Value(Box::new(&self.#verbatim_fields_idents))),)*
+                #((#tahini_fields_strings, <#tahini_fields_types as ::tahini_tarpc::traits::TahiniType>::to_tahini_enum(self.#tahini_fields_idents)),)*
+                #((#verbatim_fields_strings, ::tahini_tarpc::enums::TahiniEnum::Value(Box::new(self.#verbatim_fields_idents))),)*
                 ])
         }
     }
@@ -172,7 +170,7 @@ fn handle_struct(attrs: AlohomoraTypeArgs, input: ItemStruct) -> Result<TokenStr
         #[automatically_derived]
         #[doc = "Library implementation of TahiniType. Do not copy this docstring!"]
         impl #impl_generics ::tahini_tarpc::traits::TahiniType for #input_ident #ty_generics #where_clause {
-            fn to_tahini_enum(&self) -> ::tahini_tarpc::enums::TahiniEnum {
+            fn to_tahini_enum(self) -> ::tahini_tarpc::enums::TahiniEnum {
                 let mut map: ::std::collections::HashMap<&'static str, ::tahini_tarpc::enums::TahiniEnum> = #body;
                 ::tahini_tarpc::enums::TahiniEnum::Struct(#ident_str, map)
             }
@@ -237,7 +235,7 @@ fn handle_enum(attrs: AlohomoraTypeArgs, input: ItemEnum) -> Result<TokenStream,
         #[automatically_derived]
         #[doc = "Library implementation of TahiniType. Do not copy this docstring!"]
         impl #impl_generics ::tahini_tarpc::traits::TahiniType for #input_ident #ty_generics #where_clause {
-            fn to_tahini_enum(&self) -> ::tahini_tarpc::enums::TahiniEnum {
+            fn to_tahini_enum(self) -> ::tahini_tarpc::enums::TahiniEnum {
                 match self {
                     #(#input_ident::#variant_with_args => ::tahini_tarpc::enums::TahiniEnum::Enum(
                         #ident_str,

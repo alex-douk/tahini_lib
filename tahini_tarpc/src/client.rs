@@ -1,8 +1,5 @@
 use crate::context::TahiniContext;
 use crate::enums::TahiniSafeWrapper;
-// use crate::tarpc::traits::{
-//     deserialize_tahini_type, serialize_tahini_type, TahiniType, TahiniType2,
-// };
 use crate::traits::{Fromable, TahiniTransformInto, TahiniType};
 use crate::transport::KeyEngine;
 use hoodini_client::DynamicAttestationVerifier;
@@ -96,7 +93,7 @@ pub trait TahiniStub {
     ) -> Result<bool, RpcError>;
 }
 
-impl<Req: TahiniType + Clone, Resp: TahiniType> TahiniStub for TahiniChannel<Req, Resp> {
+impl<Req: TahiniType, Resp: TahiniType> TahiniStub for TahiniChannel<Req, Resp> {
     type Req = Req;
     type Resp = Resp;
 
@@ -115,7 +112,7 @@ impl<Req: TahiniType + Clone, Resp: TahiniType> TahiniStub for TahiniChannel<Req
             println!("Engine is none");
             sleep(Duration::from_secs(2));
         }
-        let request = TahiniSafeWrapper(request);
+        let request = TahiniSafeWrapper::new(request);
         let response = self.channel.call(ctx, request_name, request).await?;
         Ok(response)
     }
@@ -191,7 +188,7 @@ impl<Req: TahiniType + Clone, Resp: TahiniType> TahiniStub for TahiniChannel<Req
                 let req = wrap_closure(client_id.into());
                 let _ = self
                     .channel
-                    .call(ctx, request_name, TahiniSafeWrapper(req))
+                    .call(ctx, request_name, TahiniSafeWrapper::new(req))
                     .await?;
                 self.engine
                     .set_key(aes_key)
@@ -250,8 +247,8 @@ pub struct TahiniNewClient<C, D> {
 }
 impl<E, C, Req, Resp, Trans> TahiniNewClient<C, TahiniRequestDispatch<Req, Resp, Trans>>
 where
-    Req: TahiniType + 'static,
-    Resp: TahiniType + 'static,
+    Req: TahiniType,
+    Resp: TahiniType,
     Trans: Transport<ClientMessage<TahiniSafeWrapper<Req>>, Response<Resp>> + Send + 'static,
     // Trans: TahiniTransport<Req, Resp> + 'static,
     TahiniRequestDispatch<Req, Resp, Trans>: Future<Output = Result<(), E>> + Send + 'static,

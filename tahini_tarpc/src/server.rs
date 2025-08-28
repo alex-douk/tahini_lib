@@ -243,13 +243,13 @@ impl<T: TahiniServe> TarpcServe for ServeAdapter<T> {
                     Some(_) => {
                         self.tahini_serve
                             .serve(ctx, req)
-                            .map(|res| res.map(TahiniSafeWrapper))
+                            .map(|res| res.map(TahiniSafeWrapper::new))
                             .await
                     }
                     None => {
                         self.tahini_serve
                             .attest_serve(ctx, req, engine)
-                            .map(|res| res.map(TahiniSafeWrapper))
+                            .map(|res| res.map(TahiniSafeWrapper::new))
                             .await
                     }
                 }

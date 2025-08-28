@@ -1,14 +1,12 @@
 extern crate proc_macro;
 extern crate syn;
 
-
-mod tahini_type;
 mod tahini_service;
+mod tahini_type;
 
 use proc_macro::TokenStream;
 use quote::quote_spanned;
 use syn::{parse_macro_input, DeriveInput};
-
 
 #[proc_macro_derive(TahiniType)]
 pub fn derive_tahini_type(input: TokenStream) -> TokenStream {
@@ -18,7 +16,6 @@ pub fn derive_tahini_type(input: TokenStream) -> TokenStream {
         Err((span, err)) => quote_spanned!(span => compile_error!(#err)).into(),
     }
 }
-
 
 #[proc_macro_attribute]
 pub fn tahini_service(args: TokenStream, input: TokenStream) -> TokenStream {

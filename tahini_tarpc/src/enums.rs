@@ -1,19 +1,21 @@
-use crate::traits::{TahiniError, TahiniType};
-use alohomora::extension::SesamePConExtension;
-use alohomora::policy::TahiniPolicy;
-use alohomora::{bbox::BBox, policy::Policy};
-use serde::ser::{SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTupleVariant};
-use serde::Serialize;
-use std::collections::HashMap;
+use crate::traits::{TahiniDataType, TahiniPolicy, TahiniType};
 
+use alohomora::bbox::BBox;
+use alohomora::extensions::SesameExtension;
+
+use serde::ser::{SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTupleVariant};
+use std::collections::HashMap;
+use std::marker::PhantomData;
+
+// TODO(babman): this enum goes away when coercion is in Sesame.
 pub enum TahiniEnum {
-    Value(Box<dyn erased_serde::Serialize>),
-    BBox(BBox<Box<dyn erased_serde::Serialize>, TahiniPolicy>),
+    Value(TahiniDataType),
+    BBox(BBox<TahiniDataType, TahiniPolicy>),
     Vec(Vec<TahiniEnum>),
     Struct(&'static str, HashMap<&'static str, TahiniEnum>),
     Enum(&'static str, u32, &'static str, TahiniVariantsEnum),
     Option(Option<Box<TahiniEnum>>),
-    Result(Result<Box<TahiniEnum>, Box<dyn TahiniError>>),
+    Result(Result<Box<TahiniEnum>, Box<TahiniEnum>>),
 }
 
 pub enum TahiniVariantsEnum {
@@ -23,26 +25,22 @@ pub enum TahiniVariantsEnum {
     Tuple(Vec<TahiniEnum>),
 }
 
+// Serializes the TahiniEnum using a Sesame extension.
 struct BBoxSerializer<S: serde::Serializer>(S);
 
-impl<T, P: Policy, S: serde::Serializer> SesamePConExtension<T, P, Result<S::Ok, S::Error>>
+impl<S: serde::Serializer> SesameExtension<TahiniDataType, TahiniPolicy, Result<S::Ok, S::Error>>
     for BBoxSerializer<S>
 where
-    T: Serialize,
-    P: Serialize,
     S: serde::Serializer,
 {
-    fn apply(self, data: T, policy: P) -> Result<S::Ok, S::Error> {
-        let mut bbox_ser = self.0.serialize_struct("BBox", 2)?;
-        bbox_ser.serialize_field("fb", &data)?;
-        bbox_ser.serialize_field("p", &policy)?;
-        bbox_ser.end()
+    fn apply(self, data: TahiniDataType, policy: TahiniPolicy) -> Result<S::Ok, S::Error> {
+        self.apply_ref(&data, &policy)
     }
 
-    fn apply_ref(self, data: &T, policy: &P) -> Result<S::Ok, S::Error> {
+    fn apply_ref(self, data: &TahiniDataType, policy: &TahiniPolicy) -> Result<S::Ok, S::Error> {
         let mut bbox_ser = self.0.serialize_struct("BBox", 2)?;
-        bbox_ser.serialize_field("fb", data)?;
-        bbox_ser.serialize_field("p", policy)?;
+        bbox_ser.serialize_field("fb", data.upcast_serialize())?;
+        bbox_ser.serialize_field("p", policy.inner().upcast_serialize())?;
         bbox_ser.end()
     }
 }
@@ -91,7 +89,7 @@ impl<'a> serde::Serialize for PrivEnumWrapper<'a> {
         S: serde::Serializer,
     {
         match &self.0 {
-            TahiniEnum::Value(val) => erased_serde::serialize(&val, serializer),
+            TahiniEnum::Value(val) => erased_serde::serialize(val.upcast_serialize(), serializer),
             TahiniEnum::BBox(bbox) => {
                 let bbox_ser = BBoxSerializer(serializer);
                 bbox.apply_extension_ref(bbox_ser)
@@ -120,6 +118,7 @@ impl<'a> serde::Serialize for PrivEnumWrapper<'a> {
             TahiniEnum::Result(res) => res
                 .as_ref()
                 .map(|v| PrivEnumWrapper(v))
+                .map_err(|e| PrivEnumWrapper(e))
                 .serialize(serializer),
         }
     }
@@ -129,12 +128,23 @@ impl<'a> serde::Serialize for PrivEnumWrapper<'a> {
 //The real reason is that it gives explicit typing to our structs.
 //It's open to debate whether we want to have two layers :shrug:
 
-pub struct TahiniSafeWrapper<T: TahiniType>(pub(crate) T);
-impl<T: TahiniType + Sized> serde::Serialize for TahiniSafeWrapper<T> {
+pub struct TahiniSafeWrapper<T: TahiniType> {
+    e: TahiniEnum,
+    t: PhantomData<T>,
+}
+impl<T: TahiniType> TahiniSafeWrapper<T> {
+    pub fn new(t: T) -> Self {
+        Self {
+            e: t.to_tahini_enum(),
+            t: PhantomData,
+        }
+    }
+}
+impl<T: TahiniType + Clone> serde::Serialize for TahiniSafeWrapper<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        PrivEnumWrapper(&self.0.to_tahini_enum()).serialize(serializer)
+        PrivEnumWrapper(&self.e).serialize(serializer)
     }
 }

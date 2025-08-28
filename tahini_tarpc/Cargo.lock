@@ -40,13 +40,13 @@ dependencies = [
 [[package]]
 name = "alohomora"
 version = "0.1.0"
-source = "git+https://github.com/brownsys/Sesame?branch=extensions_devel#5cc9655f768e76adba7a36ac92f576d791625107"
+source = "git+https://github.com/brownsys/Sesame?branch=tahini-dev#556b77f117f6567a799c58cd2848dfd013ae592f"
 dependencies = [
  "alohomora_derive",
  "alohomora_sandbox",
- "async-trait",
  "chrono",
  "cookie",
+ "dyn-clone",
  "dynfmt",
  "either",
  "erased-serde 0.3.31",
@@ -73,7 +73,7 @@ dependencies = [
 [[package]]
 name = "alohomora_derive"
 version = "0.1.0"
-source = "git+https://github.com/brownsys/Sesame?branch=extensions_devel#5cc9655f768e76adba7a36ac92f576d791625107"
+source = "git+https://github.com/brownsys/Sesame?branch=tahini-dev#556b77f117f6567a799c58cd2848dfd013ae592f"
 dependencies = [
  "attribute-derive",
  "proc-macro2",
@@ -86,7 +86,7 @@ dependencies = [
 [[package]]
 name = "alohomora_sandbox"
 version = "0.1.0"
-source = "git+https://github.com/brownsys/Sesame?branch=extensions_devel#5cc9655f768e76adba7a36ac92f576d791625107"
+source = "git+https://github.com/brownsys/Sesame?branch=tahini-dev#556b77f117f6567a799c58cd2848dfd013ae592f"
 dependencies = [
  "alohomora_derive",
  "bincode",
@@ -874,6 +874,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+
+[[package]]
 name = "dynfmt"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1455,7 +1461,6 @@ dependencies = [
 [[package]]
 name = "hoodini_client"
 version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib?branch=standalone_tahini#c1fc8c386f85f5a0208d52edc5b37414e8861b7b"
 dependencies = [
  "aws-lc-rs",
  "hex",
@@ -1471,7 +1476,6 @@ dependencies = [
 [[package]]
 name = "hoodini_core"
 version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib?branch=standalone_tahini#c1fc8c386f85f5a0208d52edc5b37414e8861b7b"
 dependencies = [
  "aws-lc-rs",
  "hex",
@@ -1487,7 +1491,6 @@ dependencies = [
 [[package]]
 name = "hoodini_server"
 version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib?branch=standalone_tahini#c1fc8c386f85f5a0208d52edc5b37414e8861b7b"
 dependencies = [
  "aws-lc-rs",
  "hex",
@@ -3830,11 +3833,11 @@ dependencies = [
 [[package]]
 name = "tahini_tarpc_derive"
 version = "0.1.0"
-source = "git+https://github.com/alex-douk/tahini_lib?branch=standalone_tahini#c1fc8c386f85f5a0208d52edc5b37414e8861b7b"
 dependencies = [
  "attribute-derive",
  "proc-macro2",
  "quote",
+ "serde",
  "syn 2.0.106",
 ]
 

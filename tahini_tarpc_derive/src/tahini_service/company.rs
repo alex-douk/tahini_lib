@@ -756,7 +756,7 @@ impl<'a> ServiceGenerator<'a> {
 
                 async fn attest_on_launch(&self) {
                     let in_closure = |client_id| {#request_ident::TahiniAttestVariant(client_id)};
-                    let res = self.0.attest_to_remote(::tarpc::context::Context::current(), #service_ident_str , in_closure).await;
+                    let res = ::tahini_tarpc::client::TahiniStub::attest_to_remote(&self.0, ::tarpc::context::Context::current(), #service_ident_str , in_closure).await;
                     match res {
                         ::core::result::Result::Ok(_) => println!("Server set session as expected"),
                         ::core::result::Result::Err(_) => panic!("Server encountered an attestation error"),
@@ -887,7 +887,7 @@ fn impl_rpc_method(
 
                         }
                     };
-                    self.0.transform_with_fromable::<(#(#input_arg_types),*), (#(#local_args),*), _, #return_type, _>(ctx, #camel_case_ident_str, #context_builder, (#(#arg_pats),*), input_closure, output_closure)
+                    ::tahini_tarpc::client::TahiniStub::transform_with_fromable::<(#(#input_arg_types),*), (#(#local_args),*), _, #return_type, _>(self.0, ctx, #camel_case_ident_str, #context_builder, (#(#arg_pats),*), input_closure, output_closure)
             }
         }
     } else {
@@ -899,7 +899,7 @@ fn impl_rpc_method(
             Output = ::core::result::Result<#return_type, ::tarpc::client::RpcError>
             > + '_ {
                 let input_closure = |(#(#closure_args),*): (#(#input_arg_types),*)| {#request_ident::#camel_case_ident {#(#arg_pats: #closure_args),* }};
-                let resp = self.0.transform_only_egress::<(#(#input_arg_types),*), (#(#local_args),*), _>(ctx, #camel_case_ident_str, #context_builder, (#(#arg_pats),*), input_closure);
+                let resp = ::tahini_tarpc::client::TahiniStub::transform_only_egress::<(#(#input_arg_types),*), (#(#local_args),*), _>(&self.0, ctx, #camel_case_ident_str, #context_builder, (#(#arg_pats),*), input_closure);
                 async move {
                     match resp.await? {
                         #response_ident::#camel_case_ident(msg) => ::core::result::Result::Ok(msg),

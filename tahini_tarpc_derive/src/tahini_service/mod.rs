@@ -5,9 +5,9 @@ use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::{parse_macro_input, Attribute, Ident, Item, ItemStruct, Lit, Token};
 
+mod company;
 mod foreign;
 mod internal;
-mod company;
 
 pub enum Domain {
     Internal,
@@ -23,9 +23,13 @@ struct NamedArg {
 
 impl Debug for NamedArg {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Attribute is {}={}", self.ident.to_string(), self.value.to_string())
+        write!(
+            f,
+            "Attribute is {}={}",
+            self.ident.to_string(),
+            self.value.to_string()
+        )
     }
-
 }
 
 impl Parse for NamedArg {
@@ -78,6 +82,6 @@ pub fn service(attrs: TokenStream, input: TokenStream) -> TokenStream {
     match domain {
         Domain::Internal => internal::service(attrs, input),
         Domain::Company => company::service(attrs, input),
-        Domain::Foreign => foreign::service(attrs, input)
+        Domain::Foreign => foreign::service(attrs, input),
     }
 }

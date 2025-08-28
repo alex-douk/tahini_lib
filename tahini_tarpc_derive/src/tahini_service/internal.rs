@@ -269,15 +269,15 @@ impl Parse for DeriveMeta {
                     ),
                 }
                 derive_serde.push(meta);
-            // } else {
-            //     extend_errors!(
-            //         result,
-            //         syn::Error::new(
-            //             meta.span(),
-            //             "tarpc::service does not support this meta item"
-            //         )
-            //     );
-            //     continue;
+                // } else {
+                //     extend_errors!(
+                //         result,
+                //         syn::Error::new(
+                //             meta.span(),
+                //             "tarpc::service does not support this meta item"
+                //         )
+                //     );
+                //     continue;
             }
         }
 
@@ -541,10 +541,10 @@ impl<'a> ServiceGenerator<'a> {
                 #( #rpc_fns )*
 
             }
-        }
+        };
     }
 
-    #[cfg(feature  ="server")]
+    #[cfg(feature = "server")]
     fn struct_server(&self) -> TokenStream2 {
         let &Self {
             vis, server_ident, ..
@@ -559,7 +559,7 @@ impl<'a> ServiceGenerator<'a> {
         }
     }
 
-    #[cfg(feature  ="server")]
+    #[cfg(feature = "server")]
     fn impl_serve_for_server(&self) -> TokenStream2 {
         let &Self {
             request_ident,
@@ -680,7 +680,7 @@ impl<'a> ServiceGenerator<'a> {
         }
     }
 
-    #[cfg(feature  ="client")]
+    #[cfg(feature = "client")]
     fn struct_client(&self) -> TokenStream2 {
         let &Self {
             vis,
@@ -699,7 +699,7 @@ impl<'a> ServiceGenerator<'a> {
         }
     }
 
-    #[cfg(feature  ="client")]
+    #[cfg(feature = "client")]
     fn impl_client_new(&self) -> TokenStream2 {
         let &Self {
             client_ident,
@@ -742,7 +742,7 @@ impl<'a> ServiceGenerator<'a> {
 
                 async fn attest_on_launch(&self) {
                     let in_closure = |client_id| {#request_ident::TahiniAttestVariant(client_id)};
-                    let res = self.0.attest_to_remote(::tarpc::context::Context::current(), #service_ident_str , in_closure).await;
+                    let res = ::tahini_tarpc::client::TahiniStub::attest_to_remote(&self.0, ::tarpc::context::Context::current(), #service_ident_str , in_closure).await;
                     match res {
                         ::core::result::Result::Ok(_) => println!("Server set session as expected"),
                         ::core::result::Result::Err(_) => panic!("Server encountered an attestation error")
@@ -795,12 +795,11 @@ impl<'a> ServiceGenerator<'a> {
         // self.method_idents.iter().zip(self.method_attrs.iter()).map(
         //     // | (method_ident, attrs)| {
         //     //     match check_if_protected_rpc(attrs) {
-        //     //         true =>     
+        //     //         true =>
         //     //
         //     //     }
         //     // }
         // )
-
 
         //TODO(douk):Do we actually need a dedicated stub? I don't believe though
         quote! {
@@ -816,7 +815,7 @@ impl<'a> ServiceGenerator<'a> {
                     #vis fn #method_idents(&self, ctx: ::tarpc::context::Context, #( #args ),*)
                         -> impl ::core::future::Future<Output = ::core::result::Result<#return_types, ::tarpc::client::RpcError>> + '_ {
                         let request = #request_ident::#camel_case_idents { #( #arg_pats ),* };
-                        let resp = self.0.call(ctx, #camel_case_idents_str, request);
+                        let resp = ::tahini_tarpc::client::TahiniStub::call(&self.0, ctx, #camel_case_idents_str, request);
                         async move {
                             match resp.await? {
                                 #response_ident::#camel_case_idents(msg) => ::core::result::Result::Ok(msg),
@@ -842,12 +841,12 @@ impl<'a> ToTokens for ServiceGenerator<'a> {
             self.enum_response(),
             self.emit_warnings(),
         ];
-        #[cfg(feature  ="server")]
+        #[cfg(feature = "server")]
         {
             tokens.push(self.struct_server());
             tokens.push(self.impl_serve_for_server());
         }
-        #[cfg(feature  ="client")]
+        #[cfg(feature = "client")]
         {
             tokens.push(self.struct_client());
             tokens.push(self.impl_client_new());

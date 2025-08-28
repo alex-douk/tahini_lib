@@ -7,9 +7,9 @@ use alohomora::policy::Policy;
 
 use crate::context::TahiniContext;
 use crate::{TahiniEnum, TahiniVariantsEnum};
-use alohomora::extension::SesamePConExtension;
+use alohomora::extensions::SesameExtension;
 
-use super::{TahiniError, TahiniType};
+use super::TahiniType;
 
 pub trait PolicyFrom<SourcePolicy: Policy>: Policy {
     fn from_policy(other_policy: SourcePolicy, context: &TahiniContext) -> Result<Self, String>
@@ -48,7 +48,7 @@ pub(crate) enum EitherTahiniContext {
 }
 
 impl<'a> TahiniType for EitherTahiniContext {
-    fn to_tahini_enum(&self) -> TahiniEnum {
+    fn to_tahini_enum(self) -> TahiniEnum {
         match self {
             Self::Uninitialized => TahiniEnum::Enum(
                 "EitherTahiniContext",
@@ -97,11 +97,7 @@ impl<T: TahiniType> Fromable<T> {
     }
 }
 
-impl<
-        T: TahiniType + Clone + 'static,
-        E: std::error::Error + Clone + Send + TahiniError + 'static,
-    > Fromable<Result<T, E>>
-{
+impl<T: TahiniType, E: TahiniType> Fromable<Result<T, E>> {
     pub fn transpose(self) -> Result<Fromable<T>, E> {
         match self.data {
             Ok(d) => Ok(Fromable {
@@ -114,7 +110,7 @@ impl<
 }
 
 impl<T: TahiniType> TahiniType for Fromable<T> {
-    fn to_tahini_enum(&self) -> TahiniEnum {
+    fn to_tahini_enum(self) -> TahiniEnum {
         let mut map = HashMap::new();
         map.insert("context", self.context.to_tahini_enum());
         map.insert("data", self.data.to_tahini_enum());
@@ -160,7 +156,7 @@ pub trait TahiniTransformInto<TargetType> {
 struct BBoxPolicyTransformatorInto<'a>(&'a TahiniContext);
 
 impl<T, SourcePolicy: PolicyInto<TargetPolicy>, TargetPolicy: Policy>
-    SesamePConExtension<T, SourcePolicy, Result<BBox<T, TargetPolicy>, String>>
+    SesameExtension<T, SourcePolicy, Result<BBox<T, TargetPolicy>, String>>
     for BBoxPolicyTransformatorInto<'_>
 {
     fn apply(self, data: T, policy: SourcePolicy) -> Result<BBox<T, TargetPolicy>, String> {

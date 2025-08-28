@@ -4,3 +4,4 @@ certificates/
 sidecar/certificate_config.toml
 sidecar/sidecar_config.toml
 target/
+**/.idea/
