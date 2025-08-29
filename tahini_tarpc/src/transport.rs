@@ -342,15 +342,17 @@ where
                 //     TahiniChannelLayerError::wrapper_err("Ciphertext deserialization error")
                 // })?;
 
-                let (cipher, nonce) = src.split_at(src.len()-NONCE_LEN-1);
+                let (cipher, nonce) = src.split_at(src.len()-NONCE_LEN);
 
-                let mut cipher = BytesMut::from(cipher);
+                // let mut cipher = BytesMut::from(cipher);
+
                 let nonce = Nonce::from(&<&[u8] as TryInto<[u8;12]>>::try_into(nonce).expect("Malformed nonce"));
-                let plaintext_slice: &[u8] = key
+
+                let mut cipher : BytesMut = cipher[..].into();
+                let _ : &[u8] = key
                     .open_in_place(nonce, Aad::empty(), &mut cipher)
                     .map_err(|_| TahiniChannelLayerError::wrapper_err("Decryption error"))?;
-                let plaintext_bytes = BytesMut::from(plaintext_slice);
-                let res = C::deserialize(self.project().inner_channel, &plaintext_bytes).map_err(
+                let res = C::deserialize(self.project().inner_channel, &cipher).map_err(
                     |_| {
                         TahiniChannelLayerError::wrapper_err(
                             "Plaintext payload deserialization error",
