@@ -887,7 +887,7 @@ fn impl_rpc_method(
 
                         }
                     };
-                    ::tahini_tarpc::client::TahiniStub::transform_with_fromable::<(#(#input_arg_types),*), (#(#local_args),*), _, #return_type, _>(self.0, ctx, #camel_case_ident_str, #context_builder, (#(#arg_pats),*), input_closure, output_closure)
+                    ::tahini_tarpc::client::TahiniStub::transform_with_fromable::<(#(#input_arg_types),*), (#(#local_args),*), _, #return_type, _>(&self.0, ctx, #camel_case_ident_str, #context_builder, (#(#arg_pats),*), input_closure, output_closure)
             }
         }
     } else {
