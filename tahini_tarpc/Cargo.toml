@@ -15,7 +15,7 @@ serde_json = { version = "1.0.141", features = ["preserve_order"] }
 # tokio = { version = "1.46.1", features = ["io-std", "io-util", "rt", "mio", "libc", "tokio-macros", "macros", "rt-multi-thread"] }
 # tokio = { version = "1.42.0", features = ["io-std", "io-util", "rt", "mio", "libc"] }
 
-alohomora = {version = "0.1.0", git = "https://github.com/brownsys/Sesame", branch = "tahini-dev"}
+alohomora = { git = "https://github.com/brownsys/Sesame.git", branch = "tahini-dev", features = ["derive"] }
 tahini_tarpc_derive = {path = "../tahini_tarpc_derive", optional = true}
 hoodini_core =   {path="../tahini_attest/crates/hoodini-core", features=["attest"]}
 hoodini_client = {path="../tahini_attest/crates/hoodini-client"}

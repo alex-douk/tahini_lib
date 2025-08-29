@@ -40,7 +40,6 @@ dependencies = [
 [[package]]
 name = "alohomora"
 version = "0.1.0"
-source = "git+https://github.com/brownsys/Sesame?branch=tahini-dev#556b77f117f6567a799c58cd2848dfd013ae592f"
 dependencies = [
  "alohomora_derive",
  "alohomora_sandbox",
@@ -73,7 +72,6 @@ dependencies = [
 [[package]]
 name = "alohomora_derive"
 version = "0.1.0"
-source = "git+https://github.com/brownsys/Sesame?branch=tahini-dev#556b77f117f6567a799c58cd2848dfd013ae592f"
 dependencies = [
  "attribute-derive",
  "proc-macro2",
@@ -86,7 +84,6 @@ dependencies = [
 [[package]]
 name = "alohomora_sandbox"
 version = "0.1.0"
-source = "git+https://github.com/brownsys/Sesame?branch=tahini-dev#556b77f117f6567a799c58cd2848dfd013ae592f"
 dependencies = [
  "alohomora_derive",
  "bincode",
