@@ -292,7 +292,6 @@ where
                         .seal_in_place_append_tag(Aad::empty(), &mut cipher_buf)
                         .map_err(|_| TahiniChannelLayerError::wrapper_err("Encryption error"))?;
                     let nonce = nonce.as_ref();
-
                     cipher_buf.extend_from_slice(nonce);
                     // let encrypted_struct = SerializedCipher {
                     //     bytes: cipher_buf,
@@ -348,10 +347,15 @@ where
 
                 let nonce = Nonce::from(&<&[u8] as TryInto<[u8;12]>>::try_into(nonce).expect("Malformed nonce"));
 
+
                 let mut cipher : BytesMut = cipher[..].into();
-                let _ : &[u8] = key
+                let plaintext : &[u8] = key
                     .open_in_place(nonce, Aad::empty(), &mut cipher)
                     .map_err(|_| TahiniChannelLayerError::wrapper_err("Decryption error"))?;
+                let plaintext_length = plaintext.len();
+                unsafe {
+                    cipher.set_len(plaintext_length);
+                }
                 let res = C::deserialize(self.project().inner_channel, &cipher).map_err(
                     |_| {
                         TahiniChannelLayerError::wrapper_err(
