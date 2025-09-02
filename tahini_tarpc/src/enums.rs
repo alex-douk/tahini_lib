@@ -53,9 +53,6 @@ fn serialize_enum<S: serde::Serializer>(
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
     match variant {
-        TahiniVariantsEnum::Unit => {
-            serializer.serialize_unit_variant(enum_name, *index, variant_name)
-        }
         TahiniVariantsEnum::Struct(map) => {
             let mut struct_ser =
                 serializer.serialize_struct_variant(enum_name, *index, variant_name, map.len())?;
@@ -70,6 +67,9 @@ fn serialize_enum<S: serde::Serializer>(
             variant_name,
             &PrivEnumWrapper(&(*inner)),
         ),
+        TahiniVariantsEnum::Unit => {
+            serializer.serialize_unit_variant(enum_name, *index, variant_name)
+        }
         TahiniVariantsEnum::Tuple(iter) => {
             let mut tuple_ser =
                 serializer.serialize_tuple_variant(enum_name, *index, variant_name, iter.len())?;

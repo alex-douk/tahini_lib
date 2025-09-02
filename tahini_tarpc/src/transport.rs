@@ -9,6 +9,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::convert::TryInto;
 use std::sync::{Arc, OnceLock};
+use std::time::Instant;
 use tarpc::serde_transport::Transport;
 use tarpc::tokio_serde::{Deserializer, Serializer};
 use tarpc::tokio_util::{
@@ -268,9 +269,10 @@ where
         self: std::pin::Pin<&mut Self>,
         item: &SinkItem,
     ) -> Result<tokio_util::bytes::Bytes, Self::Error> {
+        let start_k = Instant::now();
         let key_engine = self.key_state.clone();
         let key_opt = key_engine.get_key();
-
+        let elapsed_k = start_k.elapsed();
 
 
         match key_opt {
@@ -287,12 +289,20 @@ where
                         TahiniChannelLayerError::wrapper_err("Payload serialization error")
                     })?;
 
+                    let enc_start = Instant::now();
+
                     let mut cipher_buf = Vec::from(res);
+                    println!("cipher buf is {:?}", cipher_buf);
                     let nonce = key
                         .seal_in_place_append_tag(Aad::empty(), &mut cipher_buf)
                         .map_err(|_| TahiniChannelLayerError::wrapper_err("Encryption error"))?;
                     let nonce = nonce.as_ref();
                     cipher_buf.extend_from_slice(nonce);
+                    let end_end = enc_start.elapsed();
+                    let res = Bytes::from(cipher_buf);
+                    let total_enc_time = end_end + elapsed_k;
+                    println!("Encryption time: {:?}", total_enc_time);
+
                     // let encrypted_struct = SerializedCipher {
                     //     bytes: cipher_buf,
                     //     nonce: *nonce,
@@ -301,7 +311,7 @@ where
                     //     serde_json::to_vec(&encrypted_struct).map_err(|_| {
                     //         TahiniChannelLayerError::wrapper_err("Ciphertext serialization error")
                     //     })?;
-                    Ok(Bytes::from(cipher_buf))
+                    Ok(res)
                 }
             },
         }
@@ -318,8 +328,10 @@ where
         self: std::pin::Pin<&mut Self>,
         src: &tokio_util::bytes::BytesMut,
     ) -> Result<Item, Self::Error> {
+        let start_k = Instant::now();
         let arc_cloned = self.key_state.clone();
         let key_opt = arc_cloned.get_key();
+        let elapsed_k = start_k.elapsed();
 
         // match self.encrypt {
         //     false => key_opt = None,
@@ -341,6 +353,7 @@ where
                 //     TahiniChannelLayerError::wrapper_err("Ciphertext deserialization error")
                 // })?;
 
+                let dec_start = Instant::now();
                 let (cipher, nonce) = src.split_at(src.len()-NONCE_LEN);
 
                 // let mut cipher = BytesMut::from(cipher);
@@ -352,10 +365,15 @@ where
                 let plaintext : &[u8] = key
                     .open_in_place(nonce, Aad::empty(), &mut cipher)
                     .map_err(|_| TahiniChannelLayerError::wrapper_err("Decryption error"))?;
+
+                let end_end = dec_start.elapsed();
+
                 let plaintext_length = plaintext.len();
                 unsafe {
                     cipher.set_len(plaintext_length);
                 }
+                let total_dec_time = end_end + elapsed_k;
+                println!("Decryption time: {:?}", total_dec_time);
                 let res = C::deserialize(self.project().inner_channel, &cipher).map_err(
                     |_| {
                         TahiniChannelLayerError::wrapper_err(
