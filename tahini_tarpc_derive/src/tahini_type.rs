@@ -5,28 +5,27 @@ use syn::{Data, DeriveInput, Fields, Ident, ItemEnum, ItemStruct, Variant};
 
 pub type Error = (Span, &'static str);
 
-#[derive(FromAttr, Clone)]
-#[attribute(ident = alohomora_out_type)]
-struct AlohomoraTypeArgs {
-    _name: Option<Ident>,
-    _to_derive: Option<Vec<Ident>>,
-    verbatim: Option<Vec<Ident>>,
-}
-impl AlohomoraTypeArgs {
-    pub fn is_verbatim(&self, ident: &str) -> bool {
-        match &self.verbatim {
-            None => false,
-            Some(v) => {
-                for i in v {
-                    if &i.to_string() == ident {
-                        return true;
-                    }
-                }
-                false
-            }
-        }
-    }
-}
+// #[derive(FromAttr, Clone)]
+// struct PROUT {
+//     _name: Option<Ident>,
+//     _to_derive: Option<Vec<Ident>>,
+//     verbatim: Option<Vec<Ident>>,
+// }
+// impl PROUT {
+//     pub fn is_verbatim(&self, ident: &str) -> bool {
+//         match &self.verbatim {
+//             None => false,
+//             Some(v) => {
+//                 for i in v {
+//                     if &i.to_string() == ident {
+//                         return true;
+//                     }
+//                 }
+//                 false
+//             }
+//         }
+//     }
+// }
 
 pub enum DataTypeEnum {
     Struct(ItemStruct),
@@ -35,11 +34,10 @@ pub enum DataTypeEnum {
 
 fn parse_derive_input_inner(
     input: DeriveInput,
-) -> Result<(AlohomoraTypeArgs, DataTypeEnum), Error> {
-    let attrs = AlohomoraTypeArgs::from_attributes(&input.attrs).unwrap();
+) -> Result<DataTypeEnum, Error> {
+    // let attrs = PROUT::from_attributes(&input.attrs).expect("WE ARE CRASHING");
     match input.data {
-        Data::Enum(data_enum) => Ok((
-            attrs,
+        Data::Enum(data_enum) => Ok(
             DataTypeEnum::Enum(ItemEnum {
                 attrs: input.attrs,
                 vis: input.vis,
@@ -49,13 +47,12 @@ fn parse_derive_input_inner(
                 brace_token: data_enum.brace_token,
                 variants: data_enum.variants,
             }),
-        )),
+        ),
         Data::Union(_) => Err((
             input.ident.span(),
             "derive(AlohomoraType) only works on structs",
         )),
-        Data::Struct(data_struct) => Ok((
-            attrs,
+        Data::Struct(data_struct) => Ok(
             DataTypeEnum::Struct(ItemStruct {
                 attrs: input.attrs,
                 vis: input.vis,
@@ -65,19 +62,19 @@ fn parse_derive_input_inner(
                 fields: data_struct.fields,
                 semi_token: data_struct.semi_token,
             }),
-        )),
+        ),
     }
 }
 
 pub fn derive_tahini_type_impl(input: DeriveInput) -> Result<TokenStream, Error> {
-    let (attrs, enumed_input) = parse_derive_input_inner(input.clone())?;
+    let enumed_input = parse_derive_input_inner(input.clone())?;
     match enumed_input {
-        DataTypeEnum::Enum(data_enum) => handle_enum(attrs, data_enum),
-        DataTypeEnum::Struct(data_struct) => handle_struct(attrs, data_struct),
+        DataTypeEnum::Enum(data_enum) => handle_enum(data_enum),
+        DataTypeEnum::Struct(data_struct) => handle_struct(data_struct),
     }
 }
 
-fn generate_hashmap(attrs: AlohomoraTypeArgs, f: Fields, for_enum: bool) -> TokenStream {
+fn generate_hashmap(f: Fields, for_enum: bool) -> TokenStream {
     let fields: Vec<_> = f
         .iter()
         .map(|field| {
@@ -98,16 +95,16 @@ fn generate_hashmap(attrs: AlohomoraTypeArgs, f: Fields, for_enum: bool) -> Toke
         .collect();
 
     // Filter into those that are AlohomoraTypes themselves, and those who are kept verbatim.
-    let tahini_fields: Vec<_> = fields
-        .iter()
-        .filter(|(_, string, _)| !attrs.is_verbatim(string))
-        .cloned()
-        .collect();
-    let verbatium_fields: Vec<_> = fields
-        .iter()
-        .filter(|(_, string, _)| attrs.is_verbatim(string))
-        .cloned()
-        .collect();
+    let tahini_fields: Vec<_> = fields;
+
+    //     .filter(|(_, string, _)| !attrs.is_verbatim(string))
+    //     .cloned()
+    //     .collect();
+    // let verbatium_fields: Vec<_> = fields
+    //     .iter()
+    //     .filter(|(_, string, _)| attrs.is_verbatim(string))
+    //     .cloned()
+    //     .collect();
 
     // Split field components.
     let tahini_fields_idents: Vec<_> = tahini_fields
@@ -121,38 +118,38 @@ fn generate_hashmap(attrs: AlohomoraTypeArgs, f: Fields, for_enum: bool) -> Toke
     }
     let tahini_fields_types: Vec<_> = tahini_fields.iter().map(|(_, _, ty)| ty.clone()).collect();
 
-    let verbatim_fields_idents: Vec<_> = verbatium_fields
-        .iter()
-        .map(|(ident, _, _)| ident.clone())
-        .collect();
+    // let verbatim_fields_idents: Vec<_> = verbatium_fields
+    //     .iter()
+    //     .map(|(ident, _, _)| ident.clone())
+    //     .collect();
 
-    let mut verbatim_fields_strings: Vec<_> = Vec::new();
-    for triplet in verbatium_fields.iter() {
-        verbatim_fields_strings.push(triplet.1.as_str());
-    }
+    // let mut verbatim_fields_strings: Vec<_> = Vec::new();
+    // for triplet in verbatium_fields.iter() {
+    //     verbatim_fields_strings.push(triplet.1.as_str());
+    // }
     if for_enum {
         quote! {
                 ::std::collections::HashMap::from([
                 #((#tahini_fields_strings, <#tahini_fields_types as ::tahini_tarpc::traits::TahiniType>::to_tahini_enum(#tahini_fields_idents)),)*
-                #((#verbatim_fields_strings, ::tahini_tarpc::enums::TahiniEnum::Value(Box::new(#verbatim_fields_idents))),)*
+                // #((#verbatim_fields_strings, ::tahini_tarpc::enums::TahiniEnum::Value(Box::new(#verbatim_fields_idents))),)*
                 ])
         }
     } else {
         quote! {
                 ::std::collections::HashMap::from([
                 #((#tahini_fields_strings, <#tahini_fields_types as ::tahini_tarpc::traits::TahiniType>::to_tahini_enum(self.#tahini_fields_idents)),)*
-                #((#verbatim_fields_strings, ::tahini_tarpc::enums::TahiniEnum::Value(Box::new(self.#verbatim_fields_idents))),)*
+                // #((#verbatim_fields_strings, ::tahini_tarpc::enums::TahiniEnum::Value(Box::new(self.#verbatim_fields_idents))),)*
                 ])
         }
     }
 }
-fn handle_struct(attrs: AlohomoraTypeArgs, input: ItemStruct) -> Result<TokenStream, Error> {
+fn handle_struct(input: ItemStruct) -> Result<TokenStream, Error> {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     // Expand needed variables.
     let input_ident = &input.ident;
 
-    let body = generate_hashmap(attrs, input.fields.clone(), false);
+    let body = generate_hashmap(input.fields.clone(), false);
 
     let binding = input_ident.to_string();
     let ident_str = binding.as_str();
@@ -190,7 +187,7 @@ fn handle_struct(attrs: AlohomoraTypeArgs, input: ItemStruct) -> Result<TokenStr
 
 //For each variant, we will check if their fields are named, unnamed, or unit.
 //We invoke the handler for each of those different type.
-fn handle_enum(attrs: AlohomoraTypeArgs, input: ItemEnum) -> Result<TokenStream, Error> {
+fn handle_enum( input: ItemEnum) -> Result<TokenStream, Error> {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let input_ident = &input.ident;
@@ -198,7 +195,7 @@ fn handle_enum(attrs: AlohomoraTypeArgs, input: ItemEnum) -> Result<TokenStream,
     let parsed_variants: Vec<_> = input
         .variants
         .iter()
-        .map(|var| parse_variant(attrs.clone(), var))
+        .map(|var| parse_variant( var))
         .collect();
     let indices: Vec<_> = input
         .variants
@@ -275,15 +272,15 @@ fn parse_variant_ident(var: &Variant) -> TokenStream {
     }
 }
 
-fn parse_variant(attrs: AlohomoraTypeArgs, var: &Variant) -> TokenStream {
+fn parse_variant(var: &Variant) -> TokenStream {
     match var.fields {
-        Fields::Named(..) => handle_named_variant(attrs, var),
+        Fields::Named(..) => handle_named_variant(var),
         Fields::Unnamed(..) => handle_unnamed_variant(var).unwrap(),
         Fields::Unit => handle_unit_variant(),
     }
 }
 
-// fn parse_variants_pol_check(attrs: AlohomoraTypeArgs, var: &Variant) -> TokenStream {
+// fn parse_variants_pol_check(attrs: PROUT, var: &Variant) -> TokenStream {
 //     match var.fields {
 //         Fields::Named(..) => handle_named_variant_pol_check(attrs, var),
 //         Fields::Unnamed(..) => {
@@ -296,7 +293,7 @@ fn parse_variant(attrs: AlohomoraTypeArgs, var: &Variant) -> TokenStream {
 //     }
 // }
 
-// fn handle_named_variant_pol_check(attrs: AlohomoraTypeArgs, var: &Variant) -> TokenStream {
+// fn handle_named_variant_pol_check(attrs: PROUT, var: &Variant) -> TokenStream {
 //     let fields = var.fields.clone();
 //     let fields_ident: Vec<_> = fields
 //         .iter()
@@ -355,9 +352,9 @@ fn handle_unnamed_variant(var: &Variant) -> Result<TokenStream, Error> {
     }
 }
 
-fn handle_named_variant(attrs: AlohomoraTypeArgs, var: &Variant) -> TokenStream {
+fn handle_named_variant(var: &Variant) -> TokenStream {
     let fields = var.fields.clone();
-    let body = generate_hashmap(attrs, fields, true);
+    let body = generate_hashmap(fields, true);
     quote! {
         {
             ::tahini_tarpc::enums::TahiniVariantsEnum::Struct(#body)
