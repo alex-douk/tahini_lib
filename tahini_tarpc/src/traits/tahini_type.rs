@@ -67,6 +67,7 @@ impl_tahini_trait_prim!(i32);
 impl_tahini_trait_prim!(usize);
 impl_tahini_trait_prim!(String);
 impl_tahini_trait_prim!(bool);
+impl_tahini_trait_prim!(());
 
 macro_rules! alohomora_type_tuple_impl {
   ($([$A:tt,$i:tt]),*) => (
