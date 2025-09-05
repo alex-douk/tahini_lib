@@ -61,9 +61,15 @@ macro_rules! impl_tahini_trait_prim {
 impl_tahini_trait_prim!(u8);
 impl_tahini_trait_prim!(u16);
 impl_tahini_trait_prim!(u32);
+impl_tahini_trait_prim!(u64);
+impl_tahini_trait_prim!(u128);
 impl_tahini_trait_prim!(i8);
 impl_tahini_trait_prim!(i16);
 impl_tahini_trait_prim!(i32);
+impl_tahini_trait_prim!(i64);
+impl_tahini_trait_prim!(i128);
+impl_tahini_trait_prim!(f32);
+impl_tahini_trait_prim!(f64);
 impl_tahini_trait_prim!(usize);
 impl_tahini_trait_prim!(String);
 impl_tahini_trait_prim!(bool);
