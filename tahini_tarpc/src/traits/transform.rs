@@ -318,3 +318,4 @@ transform_type_prim_impl!(usize);
 transform_type_prim_impl!(String);
 transform_type_prim_impl!(bool);
 transform_type_prim_impl!(&'static str);
+transform_type_prim_impl!(());
