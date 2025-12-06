@@ -1163,6 +1163,7 @@ name = "hoodini_client"
 version = "0.1.0"
 dependencies = [
  "aws-lc-rs",
+ "fizz_rs",
  "hex",
  "hoodini_core",
  "serde",
@@ -1193,7 +1194,7 @@ dependencies = [
 name = "hoodini_server"
 version = "0.1.0"
 dependencies = [
- "aws-lc-rs",
+ "fizz_rs",
  "hex",
  "hoodini_core",
  "lazy_static",
@@ -2494,7 +2495,7 @@ dependencies = [
 [[package]]
 name = "sesame"
 version = "0.1.0"
-source = "git+https://github.com/brownsys/Sesame.git#66362717ddade8356b8ebcb689bef852cd5d36e2"
+source = "git+https://github.com/brownsys/Sesame.git?branch=tahini-dev#7e333ae0cdac16254b53a17d9767dc23c6d65e21"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2513,7 +2514,7 @@ dependencies = [
 [[package]]
 name = "sesame_derive"
 version = "0.1.0"
-source = "git+https://github.com/brownsys/Sesame.git#66362717ddade8356b8ebcb689bef852cd5d36e2"
+source = "git+https://github.com/brownsys/Sesame.git?branch=tahini-dev#7e333ae0cdac16254b53a17d9767dc23c6d65e21"
 dependencies = [
  "attribute-derive",
  "proc-macro2",
@@ -2526,7 +2527,7 @@ dependencies = [
 [[package]]
 name = "sesame_sandbox"
 version = "0.1.0"
-source = "git+https://github.com/brownsys/Sesame.git#66362717ddade8356b8ebcb689bef852cd5d36e2"
+source = "git+https://github.com/brownsys/Sesame.git?branch=tahini-dev#7e333ae0cdac16254b53a17d9767dc23c6d65e21"
 dependencies = [
  "bincode",
  "chrono",

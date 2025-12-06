@@ -32,7 +32,7 @@ pub struct HashAndDumpCallback;
 fn find_sesame_crate(tcx: TyCtxt<'_>) -> Option<CrateNum> {
     tcx.crates(())
         .iter()
-        .find(|&&cnum| tcx.crate_name(cnum).as_str() == "alohomora")
+        .find(|&&cnum| tcx.crate_name(cnum).as_str() == "sesame")
         .copied()
 }
 
@@ -40,7 +40,7 @@ fn find_policy_trait_def_id(tcx: TyCtxt<'_>, sesame_crate_num: CrateNum) -> DefI
     let traits = tcx.traits(sesame_crate_num);
     let pol_trait = traits
         .iter()
-        .find(|&tr| tcx.def_path_str(tr) == "alohomora::policy::Policy");
+        .find(|&tr| tcx.def_path_str(tr) == "sesame::policy::Policy");
     pol_trait
         .copied()
         .expect("Couldn't find policy trait in Sesame")

@@ -17,7 +17,7 @@ syn = { version = "2.0.16", features = [ "full" ] }
 serde = { version = "1.0.219", features = ["derive"] }
 
 [dev-dependencies]
-alohomora = { git = "https://github.com/brownsys/Sesame.git", branch = "tahini-dev", features = ["derive"] }
+# alohomora = { git = "https://github.com/brownsys/Sesame.git", branch = "tahini-dev", features = ["derive"] }
 tahini_tarpc = { version = "0.1.0", path = "../tahini_tarpc", features = ["derive"] }
 tokio = "1.47.1"
 tarpc = { version = "0.34.0", features = ["full"]}
