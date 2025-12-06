@@ -1,5 +1,5 @@
-use alohomora::bbox::BBox;
-use alohomora::{SesameType, SesameTypeEnum};
+use sesame::pcon::PCon;
+use sesame::{SesameType, SesameTypeEnum};
 
 use crate::enums::TahiniEnum;
 use crate::traits::{TahiniDataDyn, TahiniPolicyDyn};
@@ -11,11 +11,11 @@ pub trait TahiniType: Send {
 
 // TODO(babman): these impls go away when generic coercion is stable in Sesame.
 
-// TahiniType for BBox.
-impl<T: TahiniDataDyn, P: TahiniPolicyDyn> TahiniType for BBox<T, P> {
+// TahiniType for PCon.
+impl<T: TahiniDataDyn + Send , P: TahiniPolicyDyn> TahiniType for PCon<T, P> {
     fn to_tahini_enum(self) -> TahiniEnum {
-        if let SesameTypeEnum::BBox(bbox) = self.to_enum() {
-            TahiniEnum::BBox(bbox)
+        if let SesameTypeEnum::PCon(bbox) = self.to_enum() {
+            TahiniEnum::PCon(bbox)
         } else {
             unreachable!()
         }
@@ -75,9 +75,9 @@ impl_tahini_trait_prim!(String);
 impl_tahini_trait_prim!(bool);
 impl_tahini_trait_prim!(());
 
-macro_rules! alohomora_type_tuple_impl {
+macro_rules! sesame_type_tuple_impl {
   ($([$A:tt,$i:tt]),*) => (
-    #[doc = "Library implementation of AlohomoraType. Do not copy this docstring!"]
+    #[doc = "Library implementation of sesameType. Do not copy this docstring!"]
     impl<$($A: TahiniType,)*> TahiniType for ($($A,)*) {
         fn to_tahini_enum(self) -> TahiniEnum {
             #[allow(non_snake_case)]
@@ -88,14 +88,14 @@ macro_rules! alohomora_type_tuple_impl {
   );
 }
 
-alohomora_type_tuple_impl!([A, 0]);
-alohomora_type_tuple_impl!([A, 0], [B, 1]);
-alohomora_type_tuple_impl!([A, 0], [B, 1], [C, 2]);
-alohomora_type_tuple_impl!([A, 0], [B, 1], [C, 2], [D, 3]);
-alohomora_type_tuple_impl!([A, 0], [B, 1], [C, 2], [D, 3], [E, 4]);
-alohomora_type_tuple_impl!([A, 0], [B, 1], [C, 2], [D, 3], [E, 4], [F, 5]);
-alohomora_type_tuple_impl!([A, 0], [B, 1], [C, 2], [D, 3], [E, 4], [F, 5], [G, 6]);
-alohomora_type_tuple_impl!(
+sesame_type_tuple_impl!([A, 0]);
+sesame_type_tuple_impl!([A, 0], [B, 1]);
+sesame_type_tuple_impl!([A, 0], [B, 1], [C, 2]);
+sesame_type_tuple_impl!([A, 0], [B, 1], [C, 2], [D, 3]);
+sesame_type_tuple_impl!([A, 0], [B, 1], [C, 2], [D, 3], [E, 4]);
+sesame_type_tuple_impl!([A, 0], [B, 1], [C, 2], [D, 3], [E, 4], [F, 5]);
+sesame_type_tuple_impl!([A, 0], [B, 1], [C, 2], [D, 3], [E, 4], [F, 5], [G, 6]);
+sesame_type_tuple_impl!(
     [A, 0],
     [B, 1],
     [C, 2],
@@ -105,7 +105,7 @@ alohomora_type_tuple_impl!(
     [G, 6],
     [H, 7]
 );
-alohomora_type_tuple_impl!(
+sesame_type_tuple_impl!(
     [A, 0],
     [B, 1],
     [C, 2],
@@ -116,7 +116,7 @@ alohomora_type_tuple_impl!(
     [H, 7],
     [I, 8]
 );
-alohomora_type_tuple_impl!(
+sesame_type_tuple_impl!(
     [A, 0],
     [B, 1],
     [C, 2],
@@ -128,7 +128,7 @@ alohomora_type_tuple_impl!(
     [I, 8],
     [J, 9]
 );
-alohomora_type_tuple_impl!(
+sesame_type_tuple_impl!(
     [A, 0],
     [B, 1],
     [C, 2],
@@ -141,7 +141,7 @@ alohomora_type_tuple_impl!(
     [J, 9],
     [K, 10]
 );
-alohomora_type_tuple_impl!(
+sesame_type_tuple_impl!(
     [A, 0],
     [B, 1],
     [C, 2],

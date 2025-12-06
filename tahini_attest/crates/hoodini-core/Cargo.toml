@@ -18,6 +18,7 @@ sha2 = "0.10.9"
 tarpc = { version = "0.36.0", features = ["full"] , optional = true}
 tokio-util = "0.7.15"
 toml = "0.8.23"
+fizz_rs = {version = "0.1.0", git = "https://github.com/alex-douk/fizz-rs.git", branch = "lib"}
 
 [features]
 attest=["dep:tarpc"]

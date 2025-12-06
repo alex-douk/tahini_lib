@@ -1,19 +1,20 @@
 use aws_lc_rs::rand::{SecureRandom, SystemRandom};
-use std::future::Future;
-use std::mem::size_of;
 use aws_lc_rs::signature::Ed25519KeyPair;
+use fizz_rs::VerificationInfo;
 use futures::StreamExt;
-use std::collections::HashMap;
-use std::io::Read;
-use std::net::{IpAddr, Ipv4Addr};
-use std::path::Path;
-use std::sync::Arc;
 use hoodini_core::certificate::{CertificateLoader, CertificateProvider};
-use hoodini_core::service::{AttestationService, compute_local_share, derive_key_from_shares};
-use hoodini_sidecar::{FifoWriterHandle, hash_bin, launch_binary};
+use hoodini_core::service::{compute_local_share, derive_key_from_shares, AttestationService};
 use hoodini_core::types::{
     BinHash, ClientId, DynamicAttestationData, DynamicAttestationReport, ServiceName,
 };
+use hoodini_sidecar::{hash_bin, CredentialManager};
+use std::collections::HashMap;
+use std::future::Future;
+use std::io::Read;
+use std::mem::size_of;
+use std::net::{IpAddr, Ipv4Addr};
+use std::path::Path;
+use std::sync::Arc;
 use tarpc::serde_transport::new as new_transport;
 use tarpc::server::{BaseChannel, Channel};
 use tarpc::tokio_serde::formats::Json;
@@ -36,8 +37,8 @@ pub struct SideCarServer {
     signing_key: Arc<RwLock<Ed25519KeyPair>>,
     //For a given binary_name, give the functional service living inside
     service_mapping: Arc<RwLock<HashMap<ServiceName, ServiceName>>>,
-    //For given service, yields the pipe write handler
-    service_key_passing_sessions: Arc<Mutex<HashMap<ServiceName, FifoWriterHandle>>>,
+    //For a given service, yields the public credential verif info
+    service_verif_info: Arc<RwLock<HashMap<ServiceName, VerificationInfo>>>,
 }
 
 //Load runtime attestation signing key from disk
@@ -63,7 +64,7 @@ impl SideCarServer {
             )),
             signing_key: Arc::new(RwLock::new(load_signing_attestation_key(key_path))),
             service_mapping: Arc::new(RwLock::new(mapping)),
-            service_key_passing_sessions: Arc::new(Mutex::new(HashMap::new())),
+            service_verif_info: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -73,40 +74,27 @@ impl SideCarServer {
         map.insert(service_name, hash);
     }
 
+    pub async fn register_verif_info(
+        &mut self,
+        service_name: ServiceName,
+        verif_info: VerificationInfo,
+    ) {
+        let mut map = self.service_verif_info.write().await;
+        map.insert(service_name, verif_info);
+    }
+
     //Debugging purposes
     pub async fn show_running_binaries(&self) {
         println!("{:#?}", self.service_bin_map.read().await);
     }
-
-    //Registers bin_name -> pipe handler
-    pub async fn setup_service_key_channel(
-        &mut self,
-        service_name: ServiceName,
-        handler: FifoWriterHandle,
-    ) {
-        let mut map = self.service_key_passing_sessions.lock().await;
-        match map.insert(service_name.clone(), handler) {
-            None => println!("Registered service {}", &service_name),
-            Some(_) => panic!("Service shouldn't be registered for the sidecar"),
-        }
-    }
 }
 
 impl AttestationService for SideCarServer {
-    //API exposed to client.
-    //Does the following (functionally):
-    //Generates client session key (via key agreement protocol)
-    //Generates client ID
-    //Generates attestation report
-    //Signs attestation report
-    //Sends (client_id, session_key) to server via pipe
-    //Returns (client_id, server_key_share, attestation_report) to client
     async fn attest_binary(
         self,
         _context: tarpc::context::Context,
         service_name: ServiceName,
         nonce: u128,
-        key_share: Vec<u8>,
     ) -> DynamicAttestationReport {
         let bin_map = self.service_bin_map.read().await;
 
@@ -122,21 +110,15 @@ impl AttestationService for SideCarServer {
         );
         let certificate = certificate_handler.get_certificate(&service_name).unwrap();
 
-        let mut usize_b = [0u8; size_of::<usize>()];
-        let rng = SystemRandom::new();
-        rng.fill(&mut usize_b).expect("Couldn't generate client id");
-        let client_id = ClientId::from(usize::from_be_bytes(usize_b));
-
-        let (sk, pk) = compute_local_share();
-        let usable_key = derive_key_from_shares(sk, key_share);
+        let verif_info_handler = self.service_verif_info.read().await;
+        let verif_info = verif_info_handler.get(&service_name).unwrap();
 
         let signing_data = DynamicAttestationData {
             cert: certificate,
             nonce,
             service_name: service_name.clone(),
             current_bin_hash: bin.clone(),
-            server_key_share: pk.as_ref().to_vec(),
-            client_id: client_id.clone(),
+            delegated_credential_info: verif_info.clone(),
         };
 
         let sign_data_u8 =
@@ -144,27 +126,12 @@ impl AttestationService for SideCarServer {
         let signer = self.signing_key.read().await;
         let sig = signer.sign(&sign_data_u8).into();
 
-        println!("Trying to access handler for service {}", &service_name);
-        let mut locked_session_handler = self.service_key_passing_sessions.lock().await;
-        locked_session_handler
-            .get_mut(
-                self.service_mapping
-                    .read()
-                    .await
-                    .get(&service_name)
-                    .expect("Provided binary is not registered"),
-            )
-            .expect("Service should have a handler but didn't")
-            .write_session_key(&usable_key.to_vec(), &client_id)
-            .expect("Couldn't write session to service pipe");
-        drop(locked_session_handler);
         DynamicAttestationReport {
             certificate: certificate.clone(),
             current_bin_hash: bin.clone(),
             nonce,
             service_name,
-            server_key_share: pk.as_ref().to_vec(),
-            client_id,
+            delegated_credential_info: verif_info.clone(),
             signature: sig,
         }
     }
@@ -188,29 +155,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.yield_mapping(),
     );
 
+    let mut credential_manager =
+        CredentialManager::new("../sidecar_cert.pem", "../sidecar_key.pem");
+
     let binaries = config.get_binaries();
 
     //Reads binaries from disk, hashes them, and registers them
     for (bin_name, bin_setup) in binaries.into_iter() {
         let hash = hash_bin(Path::new(&bin_setup.bin_path.clone())).expect("Couldn't hash binary");
-        let handler =
-            launch_binary(bin_setup.bin_path, bin_setup.run_path).expect("Couldn't start binary");
-        //FIXME: If a server forgets to import the FIFO handler, the below function hangs
-        //THis is because pipes are blocking unti they are resolved on both writes and reads.
-        //As the receiving server does not have a handler, the sidecar waits indefinitely for the
-        //service.
-        //Either have a timer, or a trusted compilation way of verifying the construction exists.
-        //Something like only generate certificates for binaries that have to run with a sidecar.
-        server
-            .setup_service_key_channel(
-                config
-                    .get_service_name(&bin_name)
-                    .expect("Binary->Service mapping does not exist")
-                    .clone(),
-                handler,
-            )
-            .await;
+        let service_name = config
+            .get_service_name(&bin_name)
+            .expect("Binary -> Service name mapping doesn't exist")
+            .0
+            .as_str();
+        let verif_info = credential_manager
+            .launch_binary(bin_setup.bin_path, bin_setup.run_path, service_name)
+            .expect("Couldn't launch binary and generated credentials for it");
         server.register_running_service(bin_name, hash).await;
+        server
+            .register_verif_info(ServiceName(service_name.to_string()), verif_info)
+            .await;
     }
 
     //Make non mutable after setup

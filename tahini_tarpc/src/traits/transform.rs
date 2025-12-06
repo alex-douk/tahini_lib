@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use alohomora::bbox::BBox;
-use alohomora::policy::Policy;
+use sesame::pcon::PCon;
+use sesame::policy::Policy;
 
 use crate::context::TahiniContext;
 use crate::{TahiniEnum, TahiniVariantsEnum};
-use alohomora::extensions::SesameExtension;
+use sesame::extensions::{SesameExtension, SesameRefExtension, UncheckedSesameExtension};
 
 use super::TahiniType;
 
@@ -153,40 +153,42 @@ pub trait TahiniTransformInto<TargetType> {
 //
 //
 
-struct BBoxPolicyTransformatorInto<'a>(&'a TahiniContext);
+struct PConPolicyTransformatorInto<'a>(&'a TahiniContext);
 
 impl<T, SourcePolicy: PolicyInto<TargetPolicy>, TargetPolicy: Policy>
-    SesameExtension<T, SourcePolicy, Result<BBox<T, TargetPolicy>, String>>
-    for BBoxPolicyTransformatorInto<'_>
+    SesameExtension<T, SourcePolicy, Result<PCon<T, TargetPolicy>, String>>
+    for PConPolicyTransformatorInto<'_>
 {
-    fn apply(self, data: T, policy: SourcePolicy) -> Result<BBox<T, TargetPolicy>, String> {
-        Ok(BBox::new(data, policy.into_policy(self.0)?))
+    fn apply(&mut self, data: T, policy: SourcePolicy) -> Result<PCon<T, TargetPolicy>, String> {
+        Ok(PCon::new(data, policy.into_policy(self.0)?))
     }
 
-    fn apply_ref(self, _data: &T, _policy: &SourcePolicy) -> Result<BBox<T, TargetPolicy>, String> {
-        unreachable!("We never transform by reference.")
-    }
+    // fn apply_ref(self, _data: &T, _policy: &SourcePolicy) -> Result<PCon<T, TargetPolicy>, String> {
+    //     unreachable!("We never transform by reference.")
+    // }
 }
 
+impl UncheckedSesameExtension for PConPolicyTransformatorInto<'_> {}
+
 impl<T, SourcePolicy: PolicyInto<TargetPolicy>, TargetPolicy: Policy>
-    TahiniTransformInto<BBox<T, TargetPolicy>> for BBox<T, SourcePolicy>
+    TahiniTransformInto<PCon<T, TargetPolicy>> for PCon<T, SourcePolicy>
 {
-    fn transform_into(self, context: &TahiniContext) -> Result<BBox<T, TargetPolicy>, String> {
-        let transformator = BBoxPolicyTransformatorInto(context);
-        self.apply_extension(transformator)
+    fn transform_into(self, context: &TahiniContext) -> Result<PCon<T, TargetPolicy>, String> {
+        let mut transformator = PConPolicyTransformatorInto(context);
+        self.unchecked_extension(&mut transformator)
     }
 }
 
 impl<T, TargetPolicy: PolicyFrom<SourcePolicy>, SourcePolicy: Policy>
-    TahiniTransformFrom<BBox<T, SourcePolicy>> for BBox<T, TargetPolicy>
+    TahiniTransformFrom<PCon<T, SourcePolicy>> for PCon<T, TargetPolicy>
 {
-    fn transform_from(other: BBox<T, SourcePolicy>, context: &TahiniContext) -> Result<Self, String>
+    fn transform_from(other: PCon<T, SourcePolicy>, context: &TahiniContext) -> Result<Self, String>
     where
         Self: Sized,
     {
         other.transform_into(context)
         // let (t, p) = other.consume();
-        // Ok(BBox::new(t, TargetPolicy::from_policy(p, context)?))
+        // Ok(PCon::new(t, TargetPolicy::from_policy(p, context)?))
     }
 }
 

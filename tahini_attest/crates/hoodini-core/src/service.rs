@@ -8,7 +8,7 @@ use aws_lc_rs::{
 #[tarpc::service]
 pub trait AttestationService {
     //FIXME: Add sidecar keyshare + client_id to the attestation report
-    async fn attest_binary(service_name: ServiceName, nonce: u128, key_share: Vec<u8>) -> crate::types::DynamicAttestationReport;
+    async fn attest_binary(service_name: ServiceName, nonce: u128) -> crate::types::DynamicAttestationReport;
 }
 
 pub fn compute_local_share() -> (EphemeralPrivateKey, PublicKey) {

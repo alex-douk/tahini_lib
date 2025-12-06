@@ -14,6 +14,7 @@ tokio-macros = "2.5.0"
 tokio-util = "0.7.15"
 hoodini_core =   {path="../tahini_attest/crates/hoodini-core", features=["attest"]}
 hoodini_sidecar = {path="../tahini_attest/crates/hoodini-sidecar"}
+fizz_rs = {git = "https://github.com/alex-douk/fizz-rs.git", branch = "lib"}
 
 toml = "0.8.23"
 futures = "0.3.31"

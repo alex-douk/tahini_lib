@@ -1,7 +1,7 @@
 use crate::traits::{TahiniDataType, TahiniPolicy, TahiniType};
 
-use alohomora::bbox::BBox;
-use alohomora::extensions::SesameExtension;
+use sesame::extensions::{SesameExtension, SesameRefExtension, UncheckedSesameExtension};
+use sesame::pcon::{self, PCon};
 
 use serde::ser::{SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTupleVariant};
 use std::collections::HashMap;
@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 // TODO(babman): this enum goes away when coercion is in Sesame.
 pub enum TahiniEnum {
     Value(TahiniDataType),
-    BBox(BBox<TahiniDataType, TahiniPolicy>),
+    PCon(PCon<TahiniDataType, TahiniPolicy>),
     Vec(Vec<TahiniEnum>),
     Struct(&'static str, HashMap<&'static str, TahiniEnum>),
     Enum(&'static str, u32, &'static str, TahiniVariantsEnum),
@@ -26,24 +26,32 @@ pub enum TahiniVariantsEnum {
 }
 
 // Serializes the TahiniEnum using a Sesame extension.
-struct BBoxSerializer<S: serde::Serializer>(S);
+// impl<S: serde::Serializer> SesameExtension<TahiniDataType, TahiniPolicy, Result<S::Ok, S::Error>>
+//     for PConSerializer<S>
+// where
+//     S: serde::Serializer,
+// {
+//     fn apply(self, data: TahiniDataType, policy: TahiniPolicy) -> Result<S::Ok, S::Error> {
+//         self.apply_ref(&data, &policy)
+//     }
+// }
+//
 
-impl<S: serde::Serializer> SesameExtension<TahiniDataType, TahiniPolicy, Result<S::Ok, S::Error>>
-    for BBoxSerializer<S>
-where
-    S: serde::Serializer,
-{
-    fn apply(self, data: TahiniDataType, policy: TahiniPolicy) -> Result<S::Ok, S::Error> {
-        self.apply_ref(&data, &policy)
-    }
+// impl<'a, S: serde::Serializer> SesameExtension<TahiniDataType, TahiniPolicy, Result<S::Ok, S::Error>> for &mut PConSerializer<S> {
+//     fn apply(&mut self, data: TahiniDataType, policy: TahiniPolicy) -> Result<S::Ok, S::Error> {
+//         
+//     }
+//
+// }
 
-    fn apply_ref(self, data: &TahiniDataType, policy: &TahiniPolicy) -> Result<S::Ok, S::Error> {
-        let mut bbox_ser = self.0.serialize_struct("BBox", 2)?;
-        bbox_ser.serialize_field("fb", data.upcast_serialize())?;
-        bbox_ser.serialize_field("p", policy.inner().upcast_serialize())?;
-        bbox_ser.end()
-    }
-}
+//Current issue is that the sesame extension API takes the extension by mutable reference
+//NOT by value.
+//However, the serializer is consumed by value for serialize_struct.
+//I can't dereference it smh.
+//What are the options here? Usually you would have a Clone trait bound to ensure everything works
+//smooth here.
+//I can't have that. 
+
 
 fn serialize_enum<S: serde::Serializer>(
     enum_name: &'static str,
@@ -90,9 +98,26 @@ impl<'a> serde::Serialize for PrivEnumWrapper<'a> {
     {
         match &self.0 {
             TahiniEnum::Value(val) => erased_serde::serialize(val.upcast_serialize(), serializer),
-            TahiniEnum::BBox(bbox) => {
-                let bbox_ser = BBoxSerializer(serializer);
-                bbox.apply_extension_ref(bbox_ser)
+            TahiniEnum::PCon(bbox) => {
+                //Because Sesame's APIs take by reference the extension object, we can't actually
+                //use a wrapper type that holds a serializer, as the serializer APIs are all by
+                //value.
+                struct PConSerializer;
+                impl<'a>
+                    SesameRefExtension<'a, TahiniDataType, TahiniPolicy, (&'a TahiniDataType, &'a TahiniPolicy)>
+                    for PConSerializer
+                {
+                    fn apply_ref(&mut self, data: &'a TahiniDataType, policy: &'a TahiniPolicy) -> (&'a TahiniDataType, &'a TahiniPolicy){
+                        (data, policy)
+                    }
+                }
+                impl UncheckedSesameExtension for PConSerializer {}
+                let mut extension = PConSerializer;
+                let (t, p) = bbox.unchecked_extension_ref(&mut extension);
+                let mut pcon_ser = serializer.serialize_struct("PCon", 2)?;
+                pcon_ser.serialize_field("fb", t.upcast_serialize())?;
+                pcon_ser.serialize_field("p", p.inner().upcast_serialize())?;
+                pcon_ser.end()
             }
             TahiniEnum::Vec(vec) => {
                 let mut vec_ser = serializer.serialize_seq(Some(vec.len()))?;

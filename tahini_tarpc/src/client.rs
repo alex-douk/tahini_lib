@@ -1,41 +1,26 @@
 use crate::context::TahiniContext;
 use crate::enums::TahiniSafeWrapper;
 use crate::traits::{Fromable, TahiniTransformInto, TahiniType};
-use crate::transport::KeyEngine;
-use hoodini_client::DynamicAttestationVerifier;
 use pin_project_lite::pin_project;
 use std::future::Future;
-use std::path::Path;
-use std::thread::sleep;
-use std::time::Duration;
 use tarpc::client::Channel as TarpcChannel;
 use tarpc::client::NewClient as TarpcNewClient;
 use tarpc::client::RequestDispatch as TarpcRequestDispatch;
 use tarpc::client::{Config, RpcError};
 use tarpc::{context, ChannelError, ClientMessage, Response, Transport};
 
-use super::transport::TahiniTransportTrait;
 
 #[derive(Clone)]
 pub struct TahiniChannel<Req: TahiniType, Resp: TahiniType> {
     channel: TarpcChannel<TahiniSafeWrapper<Req>, Resp>,
-    engine: KeyEngine,
 }
 
 impl<'a, Req: TahiniType, Resp: TahiniType> TahiniChannel<Req, Resp> {
     pub(crate) fn new(
         channel: TarpcChannel<TahiniSafeWrapper<Req>, Resp>,
-        engine: KeyEngine,
     ) -> Self {
-        Self { channel, engine }
+        Self { channel }
     }
-}
-
-#[allow(async_fn_in_trait)]
-pub trait TahiniStubWrapper {
-    type Channel: TahiniStub;
-
-    async fn attest_on_launch(&self);
 }
 
 // mimics `tarpc::client::Stub`.
@@ -85,12 +70,6 @@ pub trait TahiniStub {
         input_transform: EgressTransform,
     ) -> Result<Self::Resp, RpcError>;
 
-    async fn attest_to_remote<KeyShareWrapClosure: FnOnce(usize) -> Self::Req>(
-        &self,
-        ctx: context::Context,
-        service_name: &'static str,
-        wrap_closure: KeyShareWrapClosure,
-    ) -> Result<bool, RpcError>;
 }
 
 impl<Req: TahiniType, Resp: TahiniType> TahiniStub for TahiniChannel<Req, Resp> {
@@ -103,15 +82,6 @@ impl<Req: TahiniType, Resp: TahiniType> TahiniStub for TahiniChannel<Req, Resp> 
         request_name: &'static str,
         request: Req,
     ) -> Result<Self::Resp, RpcError> {
-        //Ensure the key has been initialized to avoid subsequent requests from doubling the key
-        //exchange
-        //FIXME: If another application thread tries to connect to the server without having
-        //received the attestation ack, we sleep.
-        //In practice, if connections are created at service start, this should never happen
-        if let None = self.engine.get_key() {
-            println!("Engine is none");
-            sleep(Duration::from_secs(2));
-        }
         let request = TahiniSafeWrapper::new(request);
         let response = self.channel.call(ctx, request_name, request).await?;
         Ok(response)
@@ -169,38 +139,6 @@ impl<Req: TahiniType, Resp: TahiniType> TahiniStub for TahiniChannel<Req, Resp> 
         self.call(ctx, request_name, wrapped).await
     }
 
-    async fn attest_to_remote<KeyShareWrapClosure: FnOnce(usize) -> Self::Req>(
-        &self,
-        ctx: context::Context,
-        service_name: &'static str,
-        wrap_closure: KeyShareWrapClosure,
-    ) -> Result<bool, RpcError> {
-        //FIXME: Could be a CLI argument eventually
-        let client_attest_config = Path::new("./client_attestation_config.toml");
-        let attest_verifier = DynamicAttestationVerifier::from_config(client_attest_config)
-            .expect("Couldn't load config");
-        match attest_verifier
-            .verify_binary(service_name.to_string().into())
-            .await
-        {
-            Ok((client_id, aes_key)) => {
-                let request_name = "tahini_attest";
-                let req = wrap_closure(client_id.into());
-                let _ = self
-                    .channel
-                    .call(ctx, request_name, TahiniSafeWrapper::new(req))
-                    .await?;
-                self.engine
-                    .set_key(aes_key)
-                    .expect("Key is already initialized for this session");
-                Ok(true)
-            }
-            Err(e) => {
-                println!("Got error {:?}", e);
-                Err(RpcError::Shutdown)
-            }
-        }
-    }
 }
 
 pin_project! {
@@ -253,21 +191,14 @@ where
     // Trans: TahiniTransport<Req, Resp> + 'static,
     TahiniRequestDispatch<Req, Resp, Trans>: Future<Output = Result<(), E>> + Send + 'static,
     E: std::error::Error + Send + Sync + 'static,
-    C: TahiniStubWrapper,
+    C: TahiniStub,
 {
-    pub async fn spawn(self) -> C {
+    pub fn spawn(self) -> C {
         let client = TarpcNewClient {
             client: self.client,
             dispatch: self.dispatch,
         };
         let client = client.spawn();
-        // if attest {
-        //TODO(douk): Attestation should be behind a feature flag (or at least a command-line
-        //variable)
-        client.attest_on_launch().await;
-        // }
-        // #[cfg(feature="attest")]
-        // client.attest_on_launch().await;
         client
     }
 }
@@ -280,17 +211,17 @@ pub fn new<Req, Resp, Trans>(
     transport: Trans,
 ) -> TahiniNewClient<
     TahiniChannel<Req, Resp>,
-    TahiniRequestDispatch<Req, Resp, Trans::InnerChannelType>,
+    TahiniRequestDispatch<Req, Resp, Trans>,
 >
 where
     Req: TahiniType,
     Resp: TahiniType,
-    Trans: TahiniTransportTrait<ClientMessage<TahiniSafeWrapper<Req>>, Response<Resp>>,
+    Trans: tarpc::Transport<ClientMessage<TahiniSafeWrapper<Req>>, Response<Resp>>,
 {
-    let engine = transport.get_engine();
-    let client = tarpc::client::new(config, transport.get_inner());
+    // let engine = transport.get_engine();
+    let client = tarpc::client::new(config, transport);
     TahiniNewClient {
-        client: TahiniChannel::new(client.client, engine),
+        client: TahiniChannel::new(client.client),
         dispatch: TahiniRequestDispatch::new(client.dispatch),
     }
 }

@@ -32,37 +32,31 @@ pub enum DataTypeEnum {
     Enum(ItemEnum),
 }
 
-fn parse_derive_input_inner(
-    input: DeriveInput,
-) -> Result<DataTypeEnum, Error> {
+fn parse_derive_input_inner(input: DeriveInput) -> Result<DataTypeEnum, Error> {
     // let attrs = PROUT::from_attributes(&input.attrs).expect("WE ARE CRASHING");
     match input.data {
-        Data::Enum(data_enum) => Ok(
-            DataTypeEnum::Enum(ItemEnum {
-                attrs: input.attrs,
-                vis: input.vis,
-                enum_token: data_enum.enum_token,
-                ident: input.ident,
-                generics: input.generics,
-                brace_token: data_enum.brace_token,
-                variants: data_enum.variants,
-            }),
-        ),
+        Data::Enum(data_enum) => Ok(DataTypeEnum::Enum(ItemEnum {
+            attrs: input.attrs,
+            vis: input.vis,
+            enum_token: data_enum.enum_token,
+            ident: input.ident,
+            generics: input.generics,
+            brace_token: data_enum.brace_token,
+            variants: data_enum.variants,
+        })),
         Data::Union(_) => Err((
             input.ident.span(),
-            "derive(AlohomoraType) only works on structs",
+            "derive(TahiniType) only works on structs",
         )),
-        Data::Struct(data_struct) => Ok(
-            DataTypeEnum::Struct(ItemStruct {
-                attrs: input.attrs,
-                vis: input.vis,
-                struct_token: data_struct.struct_token,
-                ident: input.ident,
-                generics: input.generics,
-                fields: data_struct.fields,
-                semi_token: data_struct.semi_token,
-            }),
-        ),
+        Data::Struct(data_struct) => Ok(DataTypeEnum::Struct(ItemStruct {
+            attrs: input.attrs,
+            vis: input.vis,
+            struct_token: data_struct.struct_token,
+            ident: input.ident,
+            generics: input.generics,
+            fields: data_struct.fields,
+            semi_token: data_struct.semi_token,
+        })),
     }
 }
 
@@ -187,7 +181,7 @@ fn handle_struct(input: ItemStruct) -> Result<TokenStream, Error> {
 
 //For each variant, we will check if their fields are named, unnamed, or unit.
 //We invoke the handler for each of those different type.
-fn handle_enum( input: ItemEnum) -> Result<TokenStream, Error> {
+fn handle_enum(input: ItemEnum) -> Result<TokenStream, Error> {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let input_ident = &input.ident;
@@ -195,7 +189,7 @@ fn handle_enum( input: ItemEnum) -> Result<TokenStream, Error> {
     let parsed_variants: Vec<_> = input
         .variants
         .iter()
-        .map(|var| parse_variant( var))
+        .map(|var| parse_variant(var))
         .collect();
     let indices: Vec<_> = input
         .variants

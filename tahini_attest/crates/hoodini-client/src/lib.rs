@@ -7,9 +7,9 @@ use std::{
 };
 
 use aws_lc_rs::{
-    aead::{AES_256_GCM, RandomizedNonceKey},
     signature::UnparsedPublicKey,
 };
+use fizz_rs::VerificationInfo;
 use serde::Deserialize;
 use tarpc::{context, tokio_serde::formats::Json};
 use toml::{Table, Value};
@@ -63,18 +63,10 @@ impl DynamicAttestationVerifier {
         local_certificate == remote_certificate
     }
 
-    ///Main function for client-side verification.
-    ///This function is invoked by the Tahini Tarpc wrapper (living in Sesame currently)
-    ///In order:
-    ///Generate local_key_share
-    ///Connect to sidecar to get (client_id, server_key_share, attestation_report)
-    ///Verify attestation
-    ///Finish key agreement protocol
-    ///Return client_id and key to the Tahini tarpc client handler 
     pub async fn verify_binary(
         &self,
         service_name: ServiceName,
-    ) -> AttestResult<(ClientId, RandomizedNonceKey)> {
+    ) -> AttestResult<VerificationInfo> {
         let mut dest = [0u8; 16];
         if aws_lc_rs::rand::fill(&mut dest).is_err() {
             return Err(AttestErrors::CryptoError);
@@ -88,7 +80,6 @@ impl DynamicAttestationVerifier {
 
         let bin_name = bin_name.expect("Binary reverse lookup should exist");
 
-        let (sk, pkey) = compute_local_share();
         let host = (self.sidecar_host.hostname, self.sidecar_host.port);
         let stream = tarpc::serde_transport::tcp::connect(host, Json::default);
         let client = AttestationServiceClient::new(Default::default(), stream.await.unwrap());
@@ -98,7 +89,6 @@ impl DynamicAttestationVerifier {
                 context::current(),
                 bin_name.clone(),
                 nonce,
-                pkey.as_ref().to_vec(),
             )
             .await
             .map_err(|e| AttestErrors::NetworkError(e))?;
@@ -112,19 +102,12 @@ impl DynamicAttestationVerifier {
             return Err(AttestErrors::InvalidAttestation);
         }
 
-        let client_id = report.client_id;
-        let server_key_share = report.server_key_share.clone();
-        let usable_key = derive_key_from_shares(sk, server_key_share);
-        let aes_key = RandomizedNonceKey::new(&AES_256_GCM, &usable_key)
-            .expect("Couldn't generate the AES session key client side");
-
         let attestation_data = DynamicAttestationData {
             cert: &certificate,
             nonce,
             service_name: bin_name.clone(),
             current_bin_hash: certificate.binary_hash.clone(),
-            client_id: client_id.clone(),
-            server_key_share: report.server_key_share,
+            delegated_credential_info: report.delegated_credential_info.clone()
         };
 
         let sign_data_u8 =
@@ -137,7 +120,7 @@ impl DynamicAttestationVerifier {
             )
             .map(|_| {
                 println!("Signature was verified for bin{:?}", bin_name);
-                (client_id, aes_key)
+                report.delegated_credential_info
             }).map_err(|_| AttestErrors::InvalidAttestation)
     }
 }

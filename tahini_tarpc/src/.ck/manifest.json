@@ -1,0 +1,70 @@
+{
+  "version": "0.1.0",
+  "created": 1762450713,
+  "updated": 1762450722,
+  "files": {
+    "./context.rs": {
+      "path": "./context.rs",
+      "hash": "306cf4d921df3f68d789703c11962b6ce584f2cf8d130c7ff742da8e1ca91269",
+      "last_modified": 1757026625,
+      "size": 894
+    },
+    "./transport.rs": {
+      "path": "./transport.rs",
+      "hash": "afd96296a2fa1a2f65ee37675b86a358aeddeb739e7d9e26859f66edaff7cea5",
+      "last_modified": 1757026625,
+      "size": 13140
+    },
+    "./traits/tahini_dyns.rs": {
+      "path": "./traits/tahini_dyns.rs",
+      "hash": "1e2f2b3558d615c3be40f713e7e4637fb1e36fe47a6fb1a4710ab54956d06c65",
+      "last_modified": 1757026625,
+      "size": 415
+    },
+    "./lib.rs": {
+      "path": "./lib.rs",
+      "hash": "5dedf556d7280ca2e806b48d12f096e0574dc1681a198768a02729b7e7a289a5",
+      "last_modified": 1757026625,
+      "size": 462
+    },
+    "./traits/transform.rs": {
+      "path": "./traits/transform.rs",
+      "hash": "dfdf4d86bf3775804c5ef3a8b58fb86a7505c69a6bc45ae1722c4bdc79e3122e",
+      "last_modified": 1757054370,
+      "size": 10465
+    },
+    "./server.rs": {
+      "path": "./server.rs",
+      "hash": "5b9c777e7394f49fd54233ceeab72f961935488fd10e571c0f9e197a069cd595",
+      "last_modified": 1757026625,
+      "size": 8293
+    },
+    "./enums.rs": {
+      "path": "./enums.rs",
+      "hash": "f52a4c5a1d2c8ced97663aa87869252dbacab7f6868d28056dab8acd3842404c",
+      "last_modified": 1757026625,
+      "size": 5281
+    },
+    "./client.rs": {
+      "path": "./client.rs",
+      "hash": "862a60997b087327db979ac92f13b68630f451eab243d9cc79abc47cd7544a23",
+      "last_modified": 1757026625,
+      "size": 10600
+    },
+    "./traits/mod.rs": {
+      "path": "./traits/mod.rs",
+      "hash": "185a2dacf3dca1b8c260246821d593c8e4b98792f5f2d6e67d91d393c0f0c071",
+      "last_modified": 1757026625,
+      "size": 250
+    },
+    "./traits/tahini_type.rs": {
+      "path": "./traits/tahini_type.rs",
+      "hash": "9aa594a152fcf247f31b16386ac3a37c33250eb361fdfb442ef458b6d1a1a97e",
+      "last_modified": 1757054241,
+      "size": 3668
+    }
+  },
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "embedding_dimensions": 384,
+  "chunk_hash_version": 2
+}

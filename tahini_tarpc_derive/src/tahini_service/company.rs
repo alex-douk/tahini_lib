@@ -749,20 +749,6 @@ impl<'a> ServiceGenerator<'a> {
                 }
                 #rpc_impl
             }
-            impl ::tahini_tarpc::client::TahiniStubWrapper for #client_ident
-            where
-            {
-                type Channel = ::tahini_tarpc::client::TahiniChannel<#request_ident, #response_ident>;
-
-                async fn attest_on_launch(&self) {
-                    let in_closure = |client_id| {#request_ident::TahiniAttestVariant(client_id)};
-                    let res = ::tahini_tarpc::client::TahiniStub::attest_to_remote(&self.0, ::tarpc::context::Context::current(), #service_ident_str , in_closure).await;
-                    match res {
-                        ::core::result::Result::Ok(_) => println!("Server set session as expected"),
-                        ::core::result::Result::Err(_) => panic!("Server encountered an attestation error"),
-                    }
-                }
-            }
         }
     }
 

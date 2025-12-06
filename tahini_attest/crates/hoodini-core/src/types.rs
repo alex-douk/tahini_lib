@@ -1,4 +1,5 @@
 use aws_lc_rs::signature::Signature as awsSig;
+use fizz_rs::VerificationInfo;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -34,8 +35,7 @@ pub struct DynamicAttestationReport {
     pub nonce: u128,
     pub service_name: ServiceName,
     pub current_bin_hash: BinHash,
-    pub server_key_share: Vec<u8>,
-    pub client_id: ClientId,
+    pub delegated_credential_info: VerificationInfo,
     pub signature: Signature,
 }
 
@@ -45,8 +45,7 @@ pub struct DynamicAttestationData<'a> {
     pub nonce: u128,
     pub service_name: ServiceName,
     pub current_bin_hash: BinHash,
-    pub server_key_share: Vec<u8>,
-    pub client_id: ClientId,
+    pub delegated_credential_info: VerificationInfo,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
