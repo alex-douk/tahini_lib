@@ -717,7 +717,7 @@ impl<'a> ServiceGenerator<'a> {
                 #vis fn new<T>(config: ::tarpc::client::Config, transport: T)
                 -> ::tahini_tarpc::client::TahiniNewClient<
                     Self,
-                    ::tahini_tarpc::client::TahiniRequestDispatch<#request_ident, #response_ident, T::InnerChannelType>
+                    ::tahini_tarpc::client::TahiniRequestDispatch<#request_ident, #response_ident, T>
                     >
                 where
                     T: ::tahini_tarpc::transport::TahiniTransportTrait<::tarpc::ClientMessage<::tahini_tarpc::enums::TahiniSafeWrapper<#request_ident>>,
