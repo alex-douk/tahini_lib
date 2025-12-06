@@ -23,6 +23,8 @@ impl<'a, Req: TahiniType, Resp: TahiniType> TahiniChannel<Req, Resp> {
     }
 }
 
+pub trait TahiniStubWrapper {}
+
 // mimics `tarpc::client::Stub`.
 #[allow(async_fn_in_trait)]
 pub trait TahiniStub {

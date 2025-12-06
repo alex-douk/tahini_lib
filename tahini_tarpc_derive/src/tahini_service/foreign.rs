@@ -732,7 +732,7 @@ impl<'a> ServiceGenerator<'a> {
                 #rpc_impl
             }
 
-            impl ::tahini_tarpc::client::TahiniStub for #client_ident {}
+            impl ::tahini_tarpc::client::TahiniStubWrapper for #client_ident {}
         }
     }
 

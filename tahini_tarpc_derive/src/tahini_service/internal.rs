@@ -718,7 +718,7 @@ impl<'a> ServiceGenerator<'a> {
                 #rpc_impl
             }
 
-            impl ::tahini_tarpc::client::TahiniStub for #client_ident {}
+            impl ::tahini_tarpc::client::TahiniStubWrapper for #client_ident {}
 
             //     TODO(douk): Determine if it's worth keeping? I would believe so, we just didn't
             //     take into account the stub trait for the client (we entirely bypass it) and thus
