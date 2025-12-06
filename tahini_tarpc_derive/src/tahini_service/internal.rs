@@ -706,7 +706,7 @@ impl<'a> ServiceGenerator<'a> {
                     ::tahini_tarpc::client::TahiniRequestDispatch<#request_ident, #response_ident, T>
                     >
                 where
-                    T: ::tahini_tarpc::transport::TahiniTransportTrait<::tarpc::ClientMessage<::tahini_tarpc::enums::TahiniSafeWrapper<#request_ident>>,
+                    T: ::tarpc::Transport<::tarpc::ClientMessage<::tahini_tarpc::enums::TahiniSafeWrapper<#request_ident>>,
                     ::tarpc::Response<#response_ident>>
                 {
                     let new_client = ::tahini_tarpc::client::new(config, transport);
