@@ -597,24 +597,7 @@ impl<'a> ServiceGenerator<'a> {
                         #request_ident::TahiniAttestVariant(_) => {::core::result::Result::Err(::tarpc::ServerError::new(::std::io::ErrorKind::InvalidInput, "Can not serve request before attestation".to_string()))}
                     }
                 }
-
-                async fn attest_serve(self,
-                    ctx: ::tarpc::context::Context,
-                    req: #request_ident,
-                    engine: &::tahini_tarpc::transport::ServerEngine)
-                    -> ::core::result::Result<#response_ident, ::tarpc::ServerError>{
-                        match req {
-                            #request_ident::TahiniAttestVariant(client_id) => {
-                                match engine.set_session_key(client_id) {
-                                    Ok(_) => ::core::result::Result::Ok(#response_ident::TahiniAttestVariant),
-                                    Err(e) => ::core::result::Result::Err(::tarpc::ServerError::new(::std::io::ErrorKind::Other, e))
-
-                                }
-                            },
-                            _ => ::core::result::Result::Err(::tarpc::ServerError::new(::std::io::ErrorKind::InvalidInput, "Wrong datatype for attestation".to_string()))
-                        }
-
-                }
+                
             }
         }
     }
