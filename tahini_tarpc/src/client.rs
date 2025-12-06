@@ -193,7 +193,7 @@ where
     // Trans: TahiniTransport<Req, Resp> + 'static,
     TahiniRequestDispatch<Req, Resp, Trans>: Future<Output = Result<(), E>> + Send + 'static,
     E: std::error::Error + Send + Sync + 'static,
-    C: TahiniStub,
+    C: TahiniStubWrapper,
 {
     pub fn spawn(self) -> C {
         let client = TarpcNewClient {
