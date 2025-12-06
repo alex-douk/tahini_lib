@@ -35,7 +35,7 @@ impl CredentialManager {
         Command::new(bin_path.as_ref())
             .current_dir(dir_to_run)
             // .arg("--fifo_path")
-            .env("TAHINI_CREDENTIAL", credential.to_pem())
+            .env("TAHINI_CREDENTIAL", serde_json::to_string(&credential).expect("Couldn't forward the credential to service"))
             .spawn()
             .expect("Couldn't start process");
         Ok(verif_info)

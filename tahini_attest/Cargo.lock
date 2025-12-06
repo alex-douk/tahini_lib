@@ -381,7 +381,7 @@ checksum = "3a3076410a55c90011c298b04d0cfa770b00fa04e1e3c97d3f6c9de105a03844"
 [[package]]
 name = "fizz_rs"
 version = "0.1.0"
-source = "git+https://github.com/alex-douk/fizz-rs.git?branch=lib#dab382243911dba87ef8ea8ac51a78e42075e997"
+source = "git+https://github.com/alex-douk/fizz-rs.git?branch=lib#bba722176a95d6e4c08ee2c61b19d7ce93cfd1ae"
 dependencies = [
  "bytes",
  "cc",
@@ -598,6 +598,7 @@ dependencies = [
  "hex",
  "hoodini_core",
  "lazy_static",
+ "serde_json",
 ]
 
 [[package]]

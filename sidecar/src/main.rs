@@ -155,26 +155,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.yield_mapping(),
     );
 
-    let mut credential_manager =
-        CredentialManager::new("../sidecar_cert.pem", "../sidecar_key.pem");
+    let mut credential_manager = CredentialManager::new("sidecar_cert.pem", "sidecar_key.pem");
 
     let binaries = config.get_binaries();
 
     //Reads binaries from disk, hashes them, and registers them
     for (bin_name, bin_setup) in binaries.into_iter() {
         let hash = hash_bin(Path::new(&bin_setup.bin_path.clone())).expect("Couldn't hash binary");
-        let service_name = config
-            .get_service_name(&bin_name)
-            .expect("Binary -> Service name mapping doesn't exist")
-            .0
-            .as_str();
+        // let service_name = config
+        //     .get_service_name(&bin_name)
+        //     .expect("Binary -> Service name mapping doesn't exist")
+        //     .0
+        //     .as_str();
         let verif_info = credential_manager
-            .launch_binary(bin_setup.bin_path, bin_setup.run_path, service_name)
+            .launch_binary(bin_setup.bin_path, bin_setup.run_path, &bin_name.0.as_str())
             .expect("Couldn't launch binary and generated credentials for it");
-        server.register_running_service(bin_name, hash).await;
         server
-            .register_verif_info(ServiceName(service_name.to_string()), verif_info)
+            .register_running_service(bin_name.clone(), hash)
             .await;
+        server.register_verif_info(bin_name, verif_info).await;
     }
 
     //Make non mutable after setup
