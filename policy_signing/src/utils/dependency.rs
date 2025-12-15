@@ -25,12 +25,25 @@ use std::io::{BufRead, Write};
 
 static POLICY_DIRECTORY: &'static str = "./policy_hashes";
 static HASH_INDEX: &'static str = "./policy_hashes/hash_index";
+pub static SESAME_TARGET_TRAITS: [&'static str; 3] = [
+    "sesame::policy::Policy",
+    "sesame::policy::SimplePolicy",
+    "sesame::extensions::UncheckedPolicyExtension",
+];
+pub static TAHINI_TARGET_TRAITS: [&'static str; 4] = [
+    "tahini_tarpc::traits::PolicyFrom",
+    "tahini_tarpc::traits::PolicyInto",
+    "tahini_tarpc::traits::TahiniTransformFrom",
+    "tahini_tarpc::traits::TahiniTransformInto",
+];
+static SESAME_CRATE_NAME: &'static str = "sesame";
+static TAHINI_CRATE_NAME: &'static str = "tahini_tarpc";
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct JsonDumpStruct {
     dependency_hashes: HashMap<String, String>,
     local_summary_hash: String,
-    local_impls_hashes: HashMap<String, String>,
+    local_impls_hashes: HashMap<String, HashMap<String, HashMap<String, String>>>,
 }
 
 fn format_file_name(string: &String) -> String {
@@ -40,25 +53,47 @@ fn format_file_name(string: &String) -> String {
 fn find_sesame_crate(tcx: TyCtxt<'_>) -> Option<CrateNum> {
     tcx.used_crates(())
         .iter()
-        .find(|&&cnum| tcx.crate_name(cnum).as_str() == "sesame")
+        .find(|&&cnum| tcx.crate_name(cnum).as_str() == SESAME_CRATE_NAME)
         .copied()
 }
 
-fn find_policy_trait_def_id(tcx: TyCtxt<'_>, sesame_crate_num: CrateNum) -> Option<DefId> {
+fn find_tahini_crate(tcx: TyCtxt<'_>) -> Option<CrateNum> {
+    tcx.used_crates(())
+        .iter()
+        .find(|&&cnum| tcx.crate_name(cnum).as_str() == TAHINI_CRATE_NAME)
+        .copied()
+}
+
+fn find_policy_trait_def_id(
+    tcx: TyCtxt<'_>,
+    sesame_crate_num: CrateNum,
+    target_traits: &[&'static str],
+) -> Vec<(String, DefId)> {
     //TODO: We are parsing Sesame's list of traits every single time.
     //Isn't there a better way to handle that? Need to check if CrateNum of a shared dependency
     //changes between crates.
     let traits = tcx.traits(sesame_crate_num);
     let pol_trait = traits
         .iter()
-        .find(|&tr| tcx.def_path_str(tr) == "sesame::policy::Policy");
+        // .into_iter()
+        // .map(|tr| (tr.clone(), &tcx.def_path_str(tr).clone()))
+        .filter(|tr_id| target_traits.contains(&tcx.def_path_str(*tr_id).as_str()))
+        .map(|tr_id| ((&tcx.def_path_str(*tr_id)).clone(), tr_id.clone()))
+        .collect();
+
+    trace!(
+        "Found the following traits from the required trait list: {:?}",
+        pol_trait
+    );
 
     pol_trait
-        .copied()
+    // .into_iter()
+    // .collect()
 }
 
 fn hash_impls_of_trait(tcx: TyCtxt<'_>, trait_id: DefId) -> Option<HashMap<String, String>> {
     let local_pol_impls = tcx.all_local_trait_impls(()).get(&trait_id);
+    trace!("We have local pol impls : {:?}", local_pol_impls);
 
     //If the current crate has Sesame as a dependency but does not implement policies, for now we
     //silently drop. We might check for implementations of Critical Regions down the road.
@@ -72,6 +107,8 @@ fn hash_impls_of_trait(tcx: TyCtxt<'_>, trait_id: DefId) -> Option<HashMap<Strin
     let mut context = StableHashingContext::new(tcx.sess, tcx.untracked());
 
     //Goes from a LocalDefId all the way to a slice of HIR impl items.
+    //LocalDefId is bound to the local
+    //Why do we do this? HIR impl items contains all
     let local_pol_impls = local_pol_impls
         .iter()
         .map(|local_def_id| (local_def_id.to_def_id(), HirId::make_owner(*local_def_id)))
@@ -82,13 +119,12 @@ fn hash_impls_of_trait(tcx: TyCtxt<'_>, trait_id: DefId) -> Option<HashMap<Strin
 
     //For each `impl Policy` block, hash all methods.
     //We can iterate over the optimized MIR for methods.
-    //For associated types, we can just hash the type declaration.
-    //This will be useful when handling TahiniTransform<From/Into>.
     //We currently generate a hash per block.
     let mut hashed_data = Vec::new();
     for impel in local_pol_impls.iter() {
         let mut hasher = StableHasher::new();
         let (ty, items) = impel;
+        trace!("Hashing policy {:?}", ty);
         for item in items.iter() {
             let id = item.id.owner_id.to_def_id();
             let body = tcx.optimized_mir(id);
@@ -130,23 +166,54 @@ impl Debug for CrateName {
 
 pub struct Crate {
     my_crate_name: String,
-    local_implementations_stable_hashes: HashMap<String, String>,
+    local_implementations_stable_hashes: HashMap<String, HashMap<String, HashMap<String, String>>>,
     dependencies_names: Vec<CrateName>,
     dependencies_hashes: Vec<String>,
 }
 
+//TODO: Modularize this jank
 impl Crate {
     pub fn from_compiler(tcx: TyCtxt<'_>) -> Option<Self> {
+        let mut implementations_across_crates = HashMap::new();
         match find_sesame_crate(tcx) {
             Some(sesame_crate_num) => {
                 let crate_name = tcx.crate_name(LOCAL_CRATE).to_ident_string();
                 log::trace!("Found Sesame: Analyzing crate {:?}", crate_name);
-                let pol_id_opt = find_policy_trait_def_id(tcx, sesame_crate_num);
+                let pol_id_opt = find_policy_trait_def_id(
+                    tcx,
+                    sesame_crate_num,
+                    SESAME_TARGET_TRAITS.as_slice(),
+                );
+                let mut implementations = HashMap::new();
+                for (trait_name, tr_id) in pol_id_opt {
+                    if let Some(map) = hash_impls_of_trait(tcx, tr_id) {
+                        implementations.insert(trait_name, map);
+                    }
+                }
+                implementations_across_crates
+                    .insert(SESAME_CRATE_NAME.to_string(), implementations);
+                if let Some(tahini_crate_num) = find_tahini_crate(tcx) {
+                    let crate_name = tcx.crate_name(LOCAL_CRATE).to_ident_string();
+                    log::trace!("Found Tahini: Analyzing crate {:?}", crate_name);
+                    let pol_id_opt = find_policy_trait_def_id(
+                        tcx,
+                        tahini_crate_num,
+                        TAHINI_TARGET_TRAITS.as_slice(),
+                    );
+                    let mut implementations = HashMap::new();
+                    for (trait_name, tr_id) in pol_id_opt {
+                        if let Some(map) = hash_impls_of_trait(tcx, tr_id) {
+                            implementations.insert(trait_name, map);
+                        }
+                    }
+                    implementations_across_crates
+                        .insert(TAHINI_CRATE_NAME.to_string(), implementations);
+                }
                 Some(Self {
-                        my_crate_name: tcx.crate_name(LOCAL_CRATE).to_ident_string(),
-                        local_implementations_stable_hashes: pol_id_opt.map(|pol_id| hash_impls_of_trait(tcx, pol_id)).flatten().unwrap_or_default(),
-                        dependencies_names: Vec::new(),
-                        dependencies_hashes: Vec::new(),
+                    my_crate_name: tcx.crate_name(LOCAL_CRATE).to_ident_string(),
+                    local_implementations_stable_hashes: implementations_across_crates,
+                    dependencies_names: Vec::new(),
+                    dependencies_hashes: Vec::new(),
                 })
             }
             None => None,
@@ -185,7 +252,10 @@ impl Crate {
             .collect();
         my_deps_vec.sort();
         self.dependencies_names = my_deps_vec;
-        trace!("For crate : {:?}, pruned dependencies are : {:#?}", self.my_crate_name, &self.dependencies_names);
+        trace!(
+            "For crate : {:?}, pruned dependencies are : {:#?}",
+            self.my_crate_name, &self.dependencies_names
+        );
         Ok(())
     }
 
@@ -209,7 +279,10 @@ impl Crate {
         }
         dep_hashes.sort_by_key(|x| x.0);
         self.dependencies_hashes = dep_hashes.into_iter().map(|x| x.1).collect();
-        trace!("For crate : {:?}, dependencies hashes are : {:#?}", self.my_crate_name, &self.dependencies_hashes);
+        trace!(
+            "For crate : {:?}, dependencies hashes are : {:#?}",
+            self.my_crate_name, &self.dependencies_hashes
+        );
         Ok(())
     }
 
@@ -251,4 +324,3 @@ impl Crate {
         &self.dependencies_names
     }
 }
-
